@@ -1,6 +1,6 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { getCategoryTree, deleteCategory, updateCategoryOrder, isCategoryOrderFrozen, setCategoryOrderFrozen } from '../../utils/database.js'
+import { ref, computed, onMounted, watch } from 'vue'
+import { getCategoryTree, deleteCategory, updateCategoryOrder, isCategoryOrderFrozen, setCategoryOrderFrozen, getCategoryCommandCounts } from '../../utils/database.js'
 import draggable from 'vuedraggable'
 
 const props = defineProps({
@@ -13,11 +13,18 @@ const emit = defineEmits(['select', 'add', 'edit', 'refresh'])
 const isCollapsed = ref(false)
 const expandedCategories = ref(new Set()) // 记录展开的分类
 const isFrozen = ref(false) // 冻结状态
+const commandCounts = ref({}) // 命令数量统计
 
-// 初始化冻结状态
+// 初始化冻结状态和命令数量
 onMounted(() => {
   isFrozen.value = isCategoryOrderFrozen()
+  commandCounts.value = getCategoryCommandCounts()
 })
+
+// 监听分类变化，更新命令数量
+watch(() => props.categories, () => {
+  commandCounts.value = getCategoryCommandCounts()
+}, { deep: true })
 
 // 本地分类列表（用于拖拽）
 const localCategories = computed(() => props.categories)
@@ -200,6 +207,10 @@ function formatIndex(index) {
                   ></span>
                 </span>
                 <span class="flex-1 truncate ml-2">{{ cat.name }}</span>
+                <!-- 命令数量 -->
+                <span v-if="commandCounts[cat.id]" class="text-xs text-secondary ml-1">
+                  ({{ commandCounts[cat.id] }})
+                </span>
                 <!-- 拖拽手柄（仅未冻结时显示） -->
                 <span
                   v-if="!isFrozen"
@@ -250,6 +261,10 @@ function formatIndex(index) {
                     :style="{ backgroundColor: child.color || cat.color }"
                   ></span>
                   <span class="flex-1 truncate ml-2">{{ child.name }}</span>
+                  <!-- 命令数量 -->
+                  <span v-if="commandCounts[child.id]" class="text-xs text-secondary ml-1">
+                    ({{ commandCounts[child.id] }})
+                  </span>
                   <button
                     class="opacity-0 group-hover:opacity-100 hover:text-accent text-xs"
                     @click.stop="handleEdit(child)"

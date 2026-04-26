@@ -336,6 +336,47 @@ export function findCategoryByName(name, parentId = null) {
   };
 }
 
+// ========== 命令数量统计 ==========
+
+// 获取所有分类的命令数量（包括一级分类汇总其二级分类的命令）
+export function getCategoryCommandCounts() {
+  if (!db) return {}
+
+  const counts = {}
+
+  // 获取所有分类
+  const allCategories = getAllCategories()
+
+  // 统计每个分类的直接命令数量
+  const directCounts = db.exec(`
+    SELECT category_id, COUNT(*) as count
+    FROM commands
+    WHERE category_id IS NOT NULL
+    GROUP BY category_id
+  `)
+
+  if (directCounts.length) {
+    directCounts[0].values.forEach(row => {
+      counts[row[0]] = row[1]
+    })
+  }
+
+  // 为一级分类汇总：加上其二级分类的命令数量
+  allCategories.forEach(cat => {
+    if (cat.parentId === null) {
+      // 一级分类，查找其所有二级分类
+      const children = allCategories.filter(c => c.parentId === cat.id)
+      let totalCount = counts[cat.id] || 0
+      children.forEach(child => {
+        totalCount += counts[child.id] || 0
+      })
+      counts[cat.id] = totalCount
+    }
+  })
+
+  return counts
+}
+
 // ========== 命令操作 ==========
 
 // 获取命令列表，支持按架构筛选
