@@ -1,6 +1,6 @@
 <script setup>
-import { ref, watch } from 'vue'
-import { addCategory, updateCategory } from '../../utils/database.js'
+import { ref, watch, computed } from 'vue'
+import { addCategory, updateCategory, getCategories } from '../../utils/database.js'
 
 const props = defineProps({
   category: Object | null
@@ -10,7 +10,8 @@ const emit = defineEmits(['close', 'refresh'])
 
 const form = ref({
   name: '',
-  color: '#0066CC'
+  color: '#0066CC',
+  parentId: null
 })
 
 const colorOptions = [
@@ -18,17 +19,33 @@ const colorOptions = [
   '#7C3AED', '#EC4899', '#14B8A6', '#F59E0B'
 ]
 
+// 获取一级分类列表（作为父分类选项）
+const parentCategories = computed(() => {
+  return getCategories(null) // 只获取一级分类
+})
+
+// 是否是编辑模式
+const isEditing = computed(() => props.category !== null)
+
+// 编辑时，当前分类不能作为自己的父分类
+const availableParents = computed(() => {
+  if (!isEditing.value) return parentCategories.value
+  return parentCategories.value.filter(c => c.id !== props.category.id)
+})
+
 // 监听编辑数据
 watch(() => props.category, (cat) => {
   if (cat) {
     form.value = {
       name: cat.name,
-      color: cat.color
+      color: cat.color,
+      parentId: cat.parentId || cat.parent_id || null
     }
   } else {
     form.value = {
       name: '',
-      color: '#0066CC'
+      color: '#0066CC',
+      parentId: null
     }
   }
 }, { immediate: true })
@@ -41,9 +58,9 @@ async function handleSave() {
   }
   try {
     if (props.category) {
-      updateCategory(props.category.id, form.value.name, form.value.color)
+      updateCategory(props.category.id, form.value.name, form.value.color, form.value.parentId)
     } else {
-      addCategory(form.value.name, form.value.color)
+      addCategory(form.value.name, form.value.color, form.value.parentId)
     }
     emit('refresh')
     emit('close')
@@ -75,6 +92,18 @@ function handleClose() {
             class="input"
             placeholder="分类名称"
           />
+        </div>
+
+        <!-- Parent Category -->
+        <div>
+          <label class="block text-sm font-medium mb-1">父分类（可选）</label>
+          <select v-model="form.parentId" class="input">
+            <option :value="null">无（一级分类）</option>
+            <option v-for="cat in availableParents" :key="cat.id" :value="cat.id">
+              {{ cat.name }}
+            </option>
+          </select>
+          <p class="text-secondary text-xs mt-1">选择父分类将创建二级分类</p>
         </div>
 
         <!-- Color -->

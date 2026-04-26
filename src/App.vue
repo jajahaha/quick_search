@@ -7,7 +7,7 @@ import CommandModal from './components/Modal/CommandModal.vue'
 import CategoryModal from './components/Modal/CategoryModal.vue'
 import ImportModal from './components/Modal/ImportModal.vue'
 import Toast from './components/common/Toast.vue'
-import { initDB, getCommands, getCategories, searchCommands, addCommand, updateCommand, deleteCommand, updateCommandOrder } from './utils/database.js'
+import { initDB, getCommands, getCategoryTree, getAllCategories, searchCommands, addCommand, updateCommand, deleteCommand, updateCommandOrder } from './utils/database.js'
 import { copyToClipboard } from './utils/clipboard.js'
 
 // 数据状态
@@ -45,7 +45,7 @@ const filteredCommands = computed(() => {
 // 加载数据
 async function loadData() {
   try {
-    categories.value = getCategories()
+    categories.value = getCategoryTree() // 树形分类用于侧边栏
     commands.value = getCommands()
   } catch (e) {
     console.error('Load data failed:', e)

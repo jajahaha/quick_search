@@ -1,9 +1,9 @@
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 
 const props = defineProps({
   command: Object | null,
-  categories: Array
+  categories: Array // 树形分类数据
 })
 
 const emit = defineEmits(['close', 'save'])
@@ -85,15 +85,26 @@ function handleClose() {
           ></textarea>
         </div>
 
-        <!-- Category -->
+        <!-- Category - 分组选择 -->
         <div>
           <label class="block text-sm font-medium mb-1">分类</label>
           <select v-model="form.categoryId" class="input">
             <option :value="null">未分类</option>
-            <option v-for="cat in categories" :key="cat.id" :value="cat.id">
-              {{ cat.name }}
-            </option>
+            <!-- 一级分类及其二级分类 -->
+            <template v-for="cat in categories" :key="cat.id">
+              <!-- 如果一级分类没有二级分类，可以直接选择 -->
+              <option v-if="!cat.children || cat.children.length === 0" :value="cat.id">
+                {{ cat.name }}
+              </option>
+              <!-- 如果有二级分类，显示分组 -->
+              <optgroup v-else :label="cat.name">
+                <option v-for="child in cat.children" :key="child.id" :value="child.id">
+                  {{ child.name }}
+                </option>
+              </optgroup>
+            </template>
           </select>
+          <p class="text-secondary text-xs mt-1">命令将关联到选中的分类</p>
         </div>
 
         <!-- Description -->

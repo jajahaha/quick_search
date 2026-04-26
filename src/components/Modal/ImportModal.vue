@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue'
-import { getCommands, getCategories, addCommand, addCategory, exportDatabaseFile, importDatabaseFile, clearAllData } from '../../utils/database.js'
+import { getCommands, getCategories, getAllCategories, addCommand, addCategory, findCategoryByName, exportDatabaseFile, importDatabaseFile, clearAllData } from '../../utils/database.js'
 import { exportToExcel, parseExcelFile } from '../../utils/excel.js'
 
 const emit = defineEmits(['close', 'refresh', 'toast'])
@@ -8,43 +8,89 @@ const emit = defineEmits(['close', 'refresh', 'toast'])
 const importMode = ref('excel')  // 'excel' | 'db'
 const exportMode = ref('excel')  // 'excel' | 'db'
 
-// 导入 Excel
+// 导入 Excel（支持二级分类）
 async function handleImportExcel(event) {
   const file = event.target.files[0]
   if (!file) return
 
   try {
     const data = await parseExcelFile(file)
-    const categories = getCategories()
+    const allCategories = getAllCategories()
 
-    // 支持大小写不敏感匹配分类名
+    // 构建分类映射：key 为 "一级分类/二级分类" 或 "一级分类"
     const categoryMap = new Map()
-    categories.forEach(c => {
-      categoryMap.set(c.name.trim().toLowerCase(), c.id)
-      categoryMap.set(c.name.trim(), c.id)
+    allCategories.forEach(c => {
+      if (c.parentId === null) {
+        // 一级分类
+        categoryMap.set(c.name.trim(), c.id)
+        categoryMap.set(c.name.trim().toLowerCase(), c.id)
+      } else {
+        // 二级分类，找到父分类名
+        const parent = allCategories.find(p => p.id === c.parentId)
+        if (parent) {
+          const key = `${parent.name.trim()}/${c.name.trim()}`
+          categoryMap.set(key, c.id)
+          categoryMap.set(key.toLowerCase(), c.id)
+        }
+      }
     })
 
     let importedCount = 0
     data.forEach(row => {
-      const categoryName = row['分类'] ? row['分类'].trim() : ''
-      let categoryId = null
-
-      if (categoryName) {
-        if (categoryMap.has(categoryName)) {
-          categoryId = categoryMap.get(categoryName)
-        } else if (categoryMap.has(categoryName.toLowerCase())) {
-          categoryId = categoryMap.get(categoryName.toLowerCase())
-        } else {
-          const newId = addCategory(categoryName)
-          categoryMap.set(categoryName, newId)
-          categoryMap.set(categoryName.toLowerCase(), newId)
-          categoryId = newId
-        }
-      }
-
+      const parentCategoryName = row['一级分类'] ? row['一级分类'].trim() : ''
+      const childCategoryName = row['二级分类'] ? row['二级分类'].trim() : ''
       const commandName = row['名称'] ? row['名称'].trim() : ''
       const commandContent = row['命令'] ? row['命令'].trim() : ''
 
+      // 处理分类
+      let categoryId = null
+
+      if (childCategoryName) {
+        // 有二级分类
+        const key = `${parentCategoryName}/${childCategoryName}`
+        const lowerKey = key.toLowerCase()
+
+        if (categoryMap.has(key)) {
+          categoryId = categoryMap.get(key)
+        } else if (categoryMap.has(lowerKey)) {
+          categoryId = categoryMap.get(lowerKey)
+        } else {
+          // 需要创建二级分类，先确保一级分类存在
+          let parentId = null
+
+          if (parentCategoryName) {
+            if (categoryMap.has(parentCategoryName)) {
+              parentId = categoryMap.get(parentCategoryName)
+            } else if (categoryMap.has(parentCategoryName.toLowerCase())) {
+              parentId = categoryMap.get(parentCategoryName.toLowerCase())
+            } else {
+              // 创建一级分类
+              parentId = addCategory(parentCategoryName)
+              categoryMap.set(parentCategoryName, parentId)
+              categoryMap.set(parentCategoryName.toLowerCase(), parentId)
+            }
+          }
+
+          // 创建二级分类
+          categoryId = addCategory(childCategoryName, '#0066CC', parentId)
+          categoryMap.set(key, categoryId)
+          categoryMap.set(lowerKey, categoryId)
+        }
+      } else if (parentCategoryName) {
+        // 只有一级分类
+        if (categoryMap.has(parentCategoryName)) {
+          categoryId = categoryMap.get(parentCategoryName)
+        } else if (categoryMap.has(parentCategoryName.toLowerCase())) {
+          categoryId = categoryMap.get(parentCategoryName.toLowerCase())
+        } else {
+          // 创建一级分类
+          categoryId = addCategory(parentCategoryName)
+          categoryMap.set(parentCategoryName, categoryId)
+          categoryMap.set(parentCategoryName.toLowerCase(), categoryId)
+        }
+      }
+
+      // 创建命令
       if (commandName && commandContent) {
         addCommand(
           commandName,
@@ -147,7 +193,7 @@ function handleClose() {
             @change="handleImportExcel"
           />
           <p class="text-secondary text-xs mt-1">
-            支持 .xlsx/.xls 格式，字段：名称、命令、分类、描述、标签
+            支持 .xlsx/.xls 格式，字段：一级分类、二级分类、名称、命令、描述、标签
           </p>
         </div>
 
