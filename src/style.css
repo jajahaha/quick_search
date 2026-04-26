@@ -13,6 +13,7 @@
   --color-background: #FFFFFF;
   --color-bg-secondary: #F7F7F5;
   --color-border: #E5E5E5;
+  --color-command-bg: #EEEEEC;
 }
 
 /* 深色皮肤 */
@@ -26,6 +27,7 @@
   --color-background: #18181B;
   --color-bg-secondary: #27272A;
   --color-border: #3F3F46;
+  --color-command-bg: #3F3F46;
 }
 
 /* 直接设置 body 和页面元素的背景色 */

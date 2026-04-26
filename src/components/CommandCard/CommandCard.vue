@@ -104,13 +104,13 @@ function toggleCopyMenu() {
 </script>
 
 <template>
-  <div class="card p-3 hover:shadow-md transition-shadow group relative">
+  <div class="card p-2 hover:shadow-md transition-shadow group relative">
     <!-- Header -->
-    <div class="flex items-center gap-1.5 mb-1.5">
+    <div class="flex items-center gap-1 mb-1">
       <span class="text-sm">{{ archIcon }}</span>
       <span
         v-if="command.categoryName"
-        class="px-1.5 py-0.5 text-xs rounded text-white"
+        class="px-1 py-0.5 text-xs rounded text-white"
         :style="{ backgroundColor: command.categoryColor }"
       >
         {{ command.categoryName }}
@@ -119,7 +119,7 @@ function toggleCopyMenu() {
       <!-- Copy Button with Dropdown -->
       <div class="relative">
         <button
-          class="btn btn-primary opacity-0 group-hover:opacity-100 text-xs px-2 py-1"
+          class="btn btn-primary opacity-0 group-hover:opacity-100 text-xs px-2 py-0.5"
           @click="toggleCopyMenu"
         >
           复制
@@ -131,7 +131,7 @@ function toggleCopyMenu() {
         >
           <button
             v-if="archStatus.hasCentralized"
-            class="w-full px-2 py-1.5 text-left text-sm hover:bg-bg-secondary flex items-center gap-1"
+            class="w-full px-2 py-1 text-left text-sm hover:bg-bg-secondary flex items-center gap-1"
             @click="handleCopy(command.centralizedContent)"
           >
             <span class="text-blue-500">🔵</span>
@@ -139,7 +139,7 @@ function toggleCopyMenu() {
           </button>
           <button
             v-if="archStatus.hasDistributed"
-            class="w-full px-2 py-1.5 text-left text-sm hover:bg-bg-secondary flex items-center gap-1"
+            class="w-full px-2 py-1 text-left text-sm hover:bg-bg-secondary flex items-center gap-1"
             @click="handleCopy(command.distributedContent)"
           >
             <span class="text-green-500">🟢</span>
@@ -147,7 +147,7 @@ function toggleCopyMenu() {
           </button>
           <button
             v-if="archStatus.hasCommon"
-            class="w-full px-2 py-1.5 text-left text-sm hover:bg-bg-secondary flex items-center gap-1"
+            class="w-full px-2 py-1 text-left text-sm hover:bg-bg-secondary flex items-center gap-1"
             @click="handleCopy(command.content)"
           >
             <span class="text-gray-400">⚪</span>
@@ -160,7 +160,8 @@ function toggleCopyMenu() {
     <!-- 单一架构模式：显示单个内容 -->
     <div
       v-if="!isBothMode && displayContent"
-      class="bg-bg-secondary p-1.5 rounded font-mono text-sm break-all cursor-pointer hover:bg-border transition-colors"
+      class="p-1.5 rounded font-mono text-sm break-all cursor-pointer hover:bg-border transition-colors"
+      style="background-color: var(--color-command-bg)"
       @click="handleCopyCurrent"
       title="点击复制"
     >
@@ -174,11 +175,12 @@ function toggleCopyMenu() {
     </div>
 
     <!-- 全部模式：显示所有架构内容 -->
-    <div v-if="isBothMode && contentList && contentList.length > 0" class="space-y-1.5">
+    <div v-if="isBothMode && contentList && contentList.length > 0" class="space-y-1">
       <div
         v-for="item in contentList"
         :key="item.type"
-        class="bg-bg-secondary p-1.5 rounded font-mono text-sm break-all cursor-pointer hover:bg-border transition-colors"
+        class="p-1.5 rounded font-mono text-sm break-all cursor-pointer hover:bg-border transition-colors"
+      style="background-color: var(--color-command-bg)"
         @click="handleCopy(item.content)"
         title="点击复制"
       >
@@ -193,19 +195,12 @@ function toggleCopyMenu() {
     </div>
 
     <!-- Description -->
-    <p v-if="command.description" class="mt-1.5 text-secondary text-xs">
+    <p v-if="command.description" class="mt-1 text-secondary text-xs">
       {{ command.description }}
     </p>
 
-    <!-- Tags -->
-    <div v-if="tagsList.length" class="mt-1.5 flex gap-1 flex-wrap">
-      <span v-for="tag in tagsList" :key="tag" class="tag text-xs">
-        {{ tag }}
-      </span>
-    </div>
-
     <!-- Actions -->
-    <div class="mt-2 flex gap-2 opacity-0 group-hover:opacity-100">
+    <div class="mt-1 flex gap-2 opacity-0 group-hover:opacity-100">
       <button class="text-secondary hover:text-accent text-xs" @click="handleEdit">
         编辑
       </button>

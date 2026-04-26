@@ -128,6 +128,15 @@ function toggleFrozen() {
 function formatIndex(index) {
   return index.toString().padStart(2, '0')
 }
+
+// 计算总命令数量
+const totalCommandCount = computed(() => {
+  let total = 0
+  props.categories.forEach(cat => {
+    total += commandCounts.value[cat.id] || 0
+  })
+  return total
+})
 </script>
 
 <template>
@@ -162,6 +171,8 @@ function formatIndex(index) {
       >
         <span class="w-4 text-center">📋</span>
         <span class="flex-1">全部命令</span>
+        <!-- Total command count -->
+        <span class="text-xs text-secondary">{{ totalCommandCount }}</span>
         <!-- Freeze Toggle Button -->
         <button
           class="text-xs text-secondary hover:text-accent px-1"
@@ -210,7 +221,7 @@ function formatIndex(index) {
                 <span class="flex-1 truncate ml-2">{{ cat.name }}</span>
                 <!-- 命令数量 -->
                 <span v-if="commandCounts[cat.id]" class="text-xs text-secondary ml-1">
-                  ({{ commandCounts[cat.id] }})
+                  {{ commandCounts[cat.id] }}
                 </span>
                 <!-- 拖拽手柄（仅未冻结时显示） -->
                 <span
@@ -264,7 +275,7 @@ function formatIndex(index) {
                   <span class="flex-1 truncate ml-2">{{ child.name }}</span>
                   <!-- 命令数量 -->
                   <span v-if="commandCounts[child.id]" class="text-xs text-secondary ml-1">
-                    ({{ commandCounts[child.id] }})
+                    {{ commandCounts[child.id] }}
                   </span>
                   <button
                     class="opacity-0 group-hover:opacity-100 hover:text-accent text-xs"

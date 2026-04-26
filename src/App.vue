@@ -276,9 +276,11 @@ function refreshData() {
       <SearchBar
         :keyword="searchKeyword"
         @search="handleSearch"
-        class="flex-1 max-w-md"
+        class="flex-1"
       />
-      <div class="flex gap-2 flex-shrink-0 items-center">
+
+      <!-- Right side buttons -->
+      <div class="flex gap-2 flex-shrink-0 items-center ml-auto">
         <!-- Theme Switcher -->
         <button
           class="btn btn-secondary flex items-center gap-1"
@@ -326,7 +328,7 @@ function refreshData() {
           <span class="text-secondary">暂无命令，点击"新增"添加</span>
         </div>
 
-        <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+        <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
           <CommandCard
             v-for="cmd in filteredCommands"
             :key="cmd.id"

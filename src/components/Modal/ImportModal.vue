@@ -230,106 +230,118 @@ function handleClose() {
 
 <template>
   <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" @click.self="handleClose">
-    <div class="card w-full max-w-md mx-4 p-6">
-      <h2 class="text-lg font-semibold mb-4">导入/导出数据</h2>
-
-      <!-- Import Section -->
-      <div class="mb-6">
-        <h3 class="font-medium mb-2">导入</h3>
-        <div class="flex gap-2 mb-2">
-          <button
-            class="btn"
-            :class="importMode === 'excel' ? 'btn-primary' : 'btn-secondary'"
-            @click="importMode = 'excel'"
-          >
-            Excel
-          </button>
-          <button
-            class="btn"
-            :class="importMode === 'db' ? 'btn-primary' : 'btn-secondary'"
-            @click="importMode = 'db'"
-          >
-            数据库
-          </button>
-        </div>
-
-        <div v-if="importMode === 'excel'">
-          <input
-            type="file"
-            accept=".xlsx,.xls"
-            class="input"
-            @change="handleImportExcel"
-          />
-          <p class="text-secondary text-xs mt-1">
-            支持 .xlsx/.xls 格式，字段：一级分类、二级分类、名称、通用命令、集中式命令、分布式命令、描述、标签
-          </p>
-        </div>
-
-        <div v-else>
-          <input
-            type="file"
-            accept=".db"
-            class="input"
-            @change="handleImportDb"
-          />
-          <p class="text-secondary text-xs mt-1">
-            支持 .db SQLite 数据库文件，将覆盖当前数据
-          </p>
-        </div>
+    <div class="card w-full max-w-lg mx-4 overflow-hidden">
+      <!-- Header -->
+      <div class="px-5 py-4 border-b border-border flex items-center justify-between">
+        <h2 class="text-lg font-semibold">📦 数据管理</h2>
+        <button class="text-secondary hover:text-primary text-xl" @click="handleClose">×</button>
       </div>
 
-      <!-- Export Section -->
-      <div class="mb-6">
-        <h3 class="font-medium mb-2">导出</h3>
-        <div class="flex gap-2 mb-2">
+      <!-- Content -->
+      <div class="p-5 space-y-5">
+        <!-- Import Section -->
+        <div class="bg-bg-secondary rounded-lg p-4">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="text-lg">📥</span>
+            <h3 class="font-medium">导入数据</h3>
+          </div>
+          <div class="flex gap-2 mb-3">
+            <button
+              class="btn flex-1"
+              :class="importMode === 'excel' ? 'btn-primary' : 'btn-secondary'"
+              @click="importMode = 'excel'"
+            >
+              📊 Excel
+            </button>
+            <button
+              class="btn flex-1"
+              :class="importMode === 'db' ? 'btn-primary' : 'btn-secondary'"
+              @click="importMode = 'db'"
+            >
+              🗄️ 数据库
+            </button>
+          </div>
+
+          <div v-if="importMode === 'excel'" class="space-y-2">
+            <input
+              type="file"
+              accept=".xlsx,.xls"
+              class="input"
+              @change="handleImportExcel"
+            />
+            <p class="text-secondary text-xs">
+              支持 .xlsx/.xls 格式，包含：一级分类、二级分类、名称、通用/集中式/分布式命令等
+            </p>
+          </div>
+
+          <div v-else class="space-y-2">
+            <input
+              type="file"
+              accept=".db"
+              class="input"
+              @change="handleImportDb"
+            />
+            <p class="text-secondary text-xs">
+              支持 .db SQLite 数据库文件，导入后将覆盖当前数据
+            </p>
+          </div>
+        </div>
+
+        <!-- Export Section -->
+        <div class="bg-bg-secondary rounded-lg p-4">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="text-lg">📤</span>
+            <h3 class="font-medium">导出数据</h3>
+          </div>
+          <div class="flex gap-2 mb-3">
+            <button
+              class="btn flex-1"
+              :class="exportMode === 'excel' ? 'btn-primary' : 'btn-secondary'"
+              @click="exportMode = 'excel'"
+            >
+              📊 Excel
+            </button>
+            <button
+              class="btn flex-1"
+              :class="exportMode === 'db' ? 'btn-primary' : 'btn-secondary'"
+              @click="exportMode = 'db'"
+            >
+              🗄️ 数据库
+            </button>
+          </div>
+
           <button
-            class="btn"
-            :class="exportMode === 'excel' ? 'btn-primary' : 'btn-secondary'"
-            @click="exportMode = 'excel'"
+            v-if="exportMode === 'excel'"
+            class="btn btn-primary w-full"
+            @click="handleExportExcel"
           >
-            Excel
+            ⬇️ 导出为 Excel 文件
           </button>
+
           <button
-            class="btn"
-            :class="exportMode === 'db' ? 'btn-primary' : 'btn-secondary'"
-            @click="exportMode = 'db'"
+            v-else
+            class="btn btn-primary w-full"
+            @click="handleExportDb"
           >
-            数据库
+            ⬇️ 导出为数据库文件
           </button>
         </div>
 
-        <button
-          v-if="exportMode === 'excel'"
-          class="btn btn-primary w-full"
-          @click="handleExportExcel"
-        >
-          导出为 Excel 文件
-        </button>
-
-        <button
-          v-else
-          class="btn btn-primary w-full"
-          @click="handleExportDb"
-        >
-          导出为数据库文件
-        </button>
-      </div>
-
-      <!-- Clear Data -->
-      <div class="border-t border-border pt-4 space-y-2">
-        <button class="btn text-error hover:bg-error/10 w-full" @click="handleClearAll">
-          清空所有数据
-        </button>
-        <button class="btn text-secondary hover:bg-secondary/10 w-full" @click="handleRestoreDefault">
-          恢复默认数据
-        </button>
-      </div>
-
-      <!-- Close Button -->
-      <div class="mt-4 flex justify-end">
-        <button class="btn btn-secondary" @click="handleClose">
-          关闭
-        </button>
+        <!-- Data Operations -->
+        <div class="flex gap-3">
+          <button
+            class="btn flex-1 border border-error/30 text-error hover:bg-error/10"
+            @click="handleClearAll"
+          >
+            🗑️ 清空数据
+          </button>
+          <button
+            class="btn flex-1 border border-secondary/30 text-secondary hover:bg-secondary/10"
+            @click="handleRestoreDefault"
+          >
+            🔄 恢复默认
+          </button>
+        </div>
       </div>
     </div>
   </div>
