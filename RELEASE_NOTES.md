@@ -1,0 +1,127 @@
+# 快捷命令管理器 - Release Notes
+
+---
+
+## v1.0.0 (2026-04-26)
+
+### 首次发布
+
+快捷命令管理器是一个现代化的命令管理工具，帮助用户高效地存储、分类、检索和复用常用命令。
+
+### 新功能
+
+#### 核心功能
+- **命令管理**：支持添加、编辑、删除命令
+- **分类管理**：支持创建、编辑、删除分类，自定义颜色标识
+- **实时搜索**：支持按名称、命令内容、描述、标签搜索
+- **一键复制**：点击即可复制命令到剪贴板，带有成功提示
+
+#### 数据管理
+- **Excel 导入导出**：支持 .xlsx/.xls 格式数据交换
+- **数据库文件导入导出**：支持 .db SQLite 数据库文件备份恢复
+- **本地持久化**：数据自动保存到浏览器 localStorage
+
+#### 用户界面
+- **Notion 风格**：简洁美观的现代化界面
+- **响应式设计**：适配桌面、平板、移动端
+- **侧边栏分类**：可折叠的侧边栏，按分类筛选命令
+- **Toast 提示**：操作反馈提示
+
+### 技术实现
+
+| 技术 | 版本 | 用途 |
+|-----|------|------|
+| Vue 3 | 3.4.x | 前端框架 |
+| Vite | 5.x | 构建工具 |
+| Tailwind CSS | 3.4.x | 样式框架 |
+| sql.js | 1.14.x | 浏览器端 SQLite |
+| xlsx (SheetJS) | 0.18.x | Excel 处理 |
+
+### 数据结构
+
+**分类表 (categories)**
+- id: INTEGER PRIMARY KEY
+- name: TEXT (分类名称)
+- color: TEXT (颜色)
+
+**命令表 (commands)**
+- id: INTEGER PRIMARY KEY
+- name: TEXT (命令名称)
+- content: TEXT (命令内容)
+- category_id: INTEGER (分类ID)
+- description: TEXT (描述)
+- tags: TEXT (标签)
+- sort_order: INTEGER (排序)
+
+### 预置测试数据
+
+- 4 个分类：Git、NPM、Docker、系统
+- 19 条常用命令示例
+
+### 项目结构
+
+```
+quick_search/
+├── public/
+│   ├── favicon.svg
+│   ├── sql-wasm-browser.js    # sql.js 引擎
+│   └── sql-wasm-browser.wasm  # WASM 文件
+├── src/
+│   ├── components/
+│   │   ├── Sidebar/           # 侧边栏
+│   │   ├── SearchBar/         # 搜索栏
+│   │   ├── CommandCard/       # 命令卡片
+│   │   ├── Modal/             # 弹窗组件
+│   │   └── common/            # 通用组件
+│   ├── utils/
+│   │   ├── database.js        # 数据库操作
+│   │   ├── excel.js           # Excel 处理
+│   │   └── clipboard.js       # 剪贴板
+│   ├── App.vue
+│   ├── main.js
+│   └── style.css
+├── index.html
+├── package.json
+├── vite.config.js
+├── tailwind.config.js
+└── README.md
+```
+
+### 已知限制
+
+- 数据存储在浏览器 localStorage，最大约 5MB
+- sql.js WASM 文件首次加载需要网络连接
+- 暂不支持拖拽排序（计划 v1.1 实现）
+- 暂不支持云端同步（计划后续版本）
+
+### 启动方式
+
+```bash
+cd quick_search
+npm install
+npm run dev
+```
+
+或双击 `启动项目.bat` 脚本。
+
+---
+
+## 更新日志模板
+
+后续版本更新请按以下格式记录：
+
+```
+## vX.X.X (YYYY-MM-DD)
+
+### 新功能
+- 功能描述
+
+### 改进
+- 改进描述
+
+### 修复
+- Bug修复描述
+
+### 技术更新
+- 技术变更描述
+```
