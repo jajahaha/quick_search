@@ -531,12 +531,19 @@ export function importDatabaseFile(file) {
   });
 }
 
-export function clearAllData() {
+// 恢复默认数据（删除所有数据并重新生成测试数据）
+export function restoreDefaultData() {
   // 删除数据库中的所有数据
   db.run('DELETE FROM commands');
   db.run('DELETE FROM categories');
-  // 立即保存空数据库到 localStorage
-  saveDB();
   // 删除 localStorage 缓存，让下次刷新重新生成测试数据
   localStorage.removeItem(DB_KEY);
+  saveDB();
+}
+
+// 清空所有数据（删除所有数据，不重新生成测试数据）
+export function clearAllData() {
+  db.run('DELETE FROM commands');
+  db.run('DELETE FROM categories');
+  saveDB();
 }

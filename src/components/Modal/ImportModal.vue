@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue'
-import { getCommands, getCategories, getAllCategories, addCommand, addCategory, findCategoryByName, exportDatabaseFile, importDatabaseFile, clearAllData } from '../../utils/database.js'
+import { getCommands, getCategories, getAllCategories, addCommand, addCategory, findCategoryByName, exportDatabaseFile, importDatabaseFile, restoreDefaultData } from '../../utils/database.js'
 import { exportToExcel, parseExcelFile } from '../../utils/excel.js'
 
 const emit = defineEmits(['close', 'refresh', 'toast'])
@@ -150,11 +150,11 @@ function handleExportDb() {
   emit('toast', '数据库导出成功')
 }
 
-// 清空数据
-function handleClearAll() {
-  if (confirm('确定清空所有数据？此操作不可恢复！')) {
-    clearAllData()
-    emit('toast', '数据已清空')
+// 恢复默认数据
+function handleRestoreDefault() {
+  if (confirm('确定恢复默认数据？当前所有数据将被删除并恢复为初始测试数据！')) {
+    restoreDefaultData()
+    emit('toast', '已恢复默认数据')
     emit('refresh')
   }
 }
@@ -254,8 +254,8 @@ function handleClose() {
 
       <!-- Clear Data -->
       <div class="border-t border-border pt-4">
-        <button class="btn text-error hover:bg-error/10 w-full" @click="handleClearAll">
-          清空所有数据
+        <button class="btn text-error hover:bg-error/10 w-full" @click="handleRestoreDefault">
+          恢复默认数据
         </button>
       </div>
 
