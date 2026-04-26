@@ -3,7 +3,8 @@ import { ref, watch, computed } from 'vue'
 
 const props = defineProps({
   command: Object | null,
-  categories: Array // 树形分类数据
+  categories: Array, // 树形分类数据
+  archMode: String
 })
 
 const emit = defineEmits(['close', 'save'])
@@ -11,6 +12,8 @@ const emit = defineEmits(['close', 'save'])
 const form = ref({
   name: '',
   content: '',
+  centralizedContent: '',
+  distributedContent: '',
   categoryId: null,
   description: '',
   tags: ''
@@ -22,6 +25,8 @@ watch(() => props.command, (cmd) => {
     form.value = {
       name: cmd.name,
       content: cmd.content,
+      centralizedContent: cmd.centralizedContent || '',
+      distributedContent: cmd.distributedContent || '',
       categoryId: cmd.categoryId,
       description: cmd.description,
       tags: cmd.tags
@@ -30,6 +35,8 @@ watch(() => props.command, (cmd) => {
     form.value = {
       name: '',
       content: '',
+      centralizedContent: '',
+      distributedContent: '',
       categoryId: null,
       description: '',
       tags: ''
@@ -43,8 +50,9 @@ function handleSave() {
     alert('请输入命令名称')
     return
   }
-  if (!form.value.content.trim()) {
-    alert('请输入命令内容')
+  // 至少需要一个命令内容
+  if (!form.value.content.trim() && !form.value.centralizedContent.trim() && !form.value.distributedContent.trim()) {
+    alert('请至少填写一个命令内容')
     return
   }
   emit('save', form.value)
@@ -58,7 +66,7 @@ function handleClose() {
 
 <template>
   <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" @click.self="handleClose">
-    <div class="card w-full max-w-lg mx-4 p-6">
+    <div class="card w-full max-w-xl mx-4 p-6 max-h-[90vh] overflow-auto">
       <h2 class="text-lg font-semibold mb-4">
         {{ command ? '编辑命令' : '新增命令' }}
       </h2>
@@ -75,14 +83,52 @@ function handleClose() {
           />
         </div>
 
-        <!-- Content -->
+        <!-- Common Command -->
         <div>
-          <label class="block text-sm font-medium mb-1">命令内容 *</label>
+          <label class="block text-sm font-medium mb-1">
+            <span class="flex items-center gap-1">
+              <span class="text-gray-400">⚪</span>
+              通用命令
+            </span>
+          </label>
           <textarea
             v-model="form.content"
-            class="input min-h-[100px]"
-            placeholder="实际命令"
+            class="input min-h-[80px]"
+            placeholder="集中式和分布式都可用的通用命令"
           ></textarea>
+          <p class="text-secondary text-xs mt-1">两种架构都可用的命令内容</p>
+        </div>
+
+        <!-- Centralized Command -->
+        <div>
+          <label class="block text-sm font-medium mb-1">
+            <span class="flex items-center gap-1">
+              <span class="text-blue-500">🔵</span>
+              集中式命令
+            </span>
+          </label>
+          <textarea
+            v-model="form.centralizedContent"
+            class="input min-h-[80px]"
+            placeholder="集中式架构专用命令（如有则优先使用）"
+          ></textarea>
+          <p class="text-secondary text-xs mt-1">集中式架构专用命令，切换到集中式模式时显示此内容</p>
+        </div>
+
+        <!-- Distributed Command -->
+        <div>
+          <label class="block text-sm font-medium mb-1">
+            <span class="flex items-center gap-1">
+              <span class="text-green-500">🟢</span>
+              分布式命令
+            </span>
+          </label>
+          <textarea
+            v-model="form.distributedContent"
+            class="input min-h-[80px]"
+            placeholder="分布式架构专用命令（如有则优先使用）"
+          ></textarea>
+          <p class="text-secondary text-xs mt-1">分布式架构专用命令，切换到分布式模式时显示此内容</p>
         </div>
 
         <!-- Category - 分组选择 -->

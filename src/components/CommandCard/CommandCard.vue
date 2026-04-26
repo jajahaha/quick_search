@@ -1,20 +1,52 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
+import { getCommandContentByArch, hasArchContent } from '../../utils/database.js'
 
 const props = defineProps({
-  command: Object
+  command: Object,
+  archMode: String
 })
 
 const emit = defineEmits(['edit', 'delete', 'copy'])
 
+// 复制下拉菜单状态
+const showCopyMenu = ref(false)
+
+// 标签列表
 const tagsList = computed(() => {
   if (!props.command.tags) return []
   return props.command.tags.split(',').map(t => t.trim()).filter(t => t)
 })
 
+// 根据架构模式获取显示内容
+const displayContent = computed(() => {
+  return getCommandContentByArch(props.command, props.archMode)
+})
+
+// 架构内容状态
+const archStatus = computed(() => {
+  return hasArchContent(props.command)
+})
+
+// 架构图标
+const archIcon = computed(() => {
+  if (props.archMode === 'centralized') {
+    return archStatus.value.hasCentralized ? '🔵' : '⚪'
+  } else if (props.archMode === 'distributed') {
+    return archStatus.value.hasDistributed ? '🟢' : '⚪'
+  }
+  return '⚪'
+})
+
 // 复制命令
-function handleCopy() {
-  emit('copy', props.command.content)
+function handleCopy(content) {
+  emit('copy', content)
+  showCopyMenu.value = false
+}
+
+// 复制当前架构内容
+function handleCopyCurrent() {
+  handleCopy(displayContent.value)
 }
 
 // 编辑命令
@@ -28,12 +60,18 @@ function handleDelete() {
     emit('delete', props.command.id)
   }
 }
+
+// 切换复制菜单
+function toggleCopyMenu() {
+  showCopyMenu.value = !showCopyMenu.value
+}
 </script>
 
 <template>
-  <div class="card p-4 hover:shadow-md transition-shadow group">
+  <div class="card p-4 hover:shadow-md transition-shadow group relative">
     <!-- Header -->
     <div class="flex items-center gap-2 mb-2">
+      <span class="text-sm">{{ archIcon }}</span>
       <span
         v-if="command.categoryName"
         class="px-2 py-0.5 text-xs rounded text-white"
@@ -42,20 +80,54 @@ function handleDelete() {
         {{ command.categoryName }}
       </span>
       <h3 class="font-medium flex-1 truncate">{{ command.name }}</h3>
-      <button
-        class="btn btn-primary opacity-0 group-hover:opacity-100"
-        @click="handleCopy"
-      >
-        复制
-      </button>
+      <!-- Copy Button with Dropdown -->
+      <div class="relative">
+        <button
+          class="btn btn-primary opacity-0 group-hover:opacity-100"
+          @click="toggleCopyMenu"
+        >
+          复制
+        </button>
+        <!-- Copy Menu Dropdown -->
+        <div
+          v-if="showCopyMenu"
+          class="absolute right-0 top-full mt-1 bg-background border border-border rounded shadow-lg z-10 min-w-[140px]"
+        >
+          <button
+            v-if="archStatus.hasCentralized"
+            class="w-full px-3 py-2 text-left text-sm hover:bg-bg-secondary flex items-center gap-2"
+            @click="handleCopy(command.centralizedContent)"
+          >
+            <span class="text-blue-500">🔵</span>
+            集中式
+          </button>
+          <button
+            v-if="archStatus.hasDistributed"
+            class="w-full px-3 py-2 text-left text-sm hover:bg-bg-secondary flex items-center gap-2"
+            @click="handleCopy(command.distributedContent)"
+          >
+            <span class="text-green-500">🟢</span>
+            分布式
+          </button>
+          <button
+            v-if="archStatus.hasCommon"
+            class="w-full px-3 py-2 text-left text-sm hover:bg-bg-secondary flex items-center gap-2"
+            @click="handleCopy(command.content)"
+          >
+            <span class="text-gray-400">⚪</span>
+            通用
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- Command Content -->
     <div
       class="bg-bg-secondary p-2 rounded font-mono text-sm break-all cursor-pointer hover:bg-border transition-colors"
-      @click="handleCopy"
+      @click="handleCopyCurrent"
+      title="点击复制"
     >
-      {{ command.content }}
+      {{ displayContent }}
     </div>
 
     <!-- Description -->

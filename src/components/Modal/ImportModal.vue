@@ -8,7 +8,7 @@ const emit = defineEmits(['close', 'refresh', 'toast'])
 const importMode = ref('excel')  // 'excel' | 'db'
 const exportMode = ref('excel')  // 'excel' | 'db'
 
-// 导入 Excel（支持二级分类）
+// 导入 Excel（支持二级分类和架构）
 async function handleImportExcel(event) {
   const file = event.target.files[0]
   if (!file) return
@@ -40,7 +40,10 @@ async function handleImportExcel(event) {
       const parentCategoryName = row['一级分类'] ? row['一级分类'].trim() : ''
       const childCategoryName = row['二级分类'] ? row['二级分类'].trim() : ''
       const commandName = row['名称'] ? row['名称'].trim() : ''
-      const commandContent = row['命令'] ? row['命令'].trim() : ''
+      // 支持新旧格式：通用命令 或 命令
+      const commonContent = row['通用命令'] ? row['通用命令'].trim() : (row['命令'] ? row['命令'].trim() : '')
+      const centralizedContent = row['集中式命令'] ? row['集中式命令'].trim() : ''
+      const distributedContent = row['分布式命令'] ? row['分布式命令'].trim() : ''
 
       // 处理分类
       let categoryId = null
@@ -91,13 +94,15 @@ async function handleImportExcel(event) {
       }
 
       // 创建命令
-      if (commandName && commandContent) {
+      if (commandName && (commonContent || centralizedContent || distributedContent)) {
         addCommand(
           commandName,
-          commandContent,
+          commonContent,
           categoryId,
           row['描述'] ? row['描述'].trim() : '',
-          row['标签'] ? row['标签'].trim() : ''
+          row['标签'] ? row['标签'].trim() : '',
+          centralizedContent,
+          distributedContent
         )
         importedCount++
       }
@@ -193,7 +198,7 @@ function handleClose() {
             @change="handleImportExcel"
           />
           <p class="text-secondary text-xs mt-1">
-            支持 .xlsx/.xls 格式，字段：一级分类、二级分类、名称、命令、描述、标签
+            支持 .xlsx/.xls 格式，字段：一级分类、二级分类、名称、通用命令、集中式命令、分布式命令、描述、标签
           </p>
         </div>
 

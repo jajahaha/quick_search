@@ -7,8 +7,18 @@ import CommandModal from './components/Modal/CommandModal.vue'
 import CategoryModal from './components/Modal/CategoryModal.vue'
 import ImportModal from './components/Modal/ImportModal.vue'
 import Toast from './components/common/Toast.vue'
-import { initDB, getCommands, getCategoryTree, getAllCategories, searchCommands, addCommand, updateCommand, deleteCommand, updateCommandOrder } from './utils/database.js'
+import { initDB, getCommands, getCategoryTree, getAllCategories, searchCommands, addCommand, updateCommand, deleteCommand, updateCommandOrder, getCommandContentByArch } from './utils/database.js'
 import { copyToClipboard } from './utils/clipboard.js'
+
+// 架构模式状态
+const ARCH_MODE_KEY = 'gaussdb_arch_mode'
+const archMode = ref(localStorage.getItem(ARCH_MODE_KEY) || 'both') // 'both' | 'centralized' | 'distributed'
+
+// 切换架构模式
+function switchArchMode(mode) {
+  archMode.value = mode
+  localStorage.setItem(ARCH_MODE_KEY, mode)
+}
 
 // 数据状态
 const commands = ref([])
@@ -34,9 +44,9 @@ const filteredCommands = computed(() => {
   if (initError.value) return []
   try {
     if (searchKeyword.value.trim()) {
-      return searchCommands(searchKeyword.value)
+      return searchCommands(searchKeyword.value, archMode.value)
     }
-    return getCommands(selectedCategoryId.value)
+    return getCommands(selectedCategoryId.value, archMode.value)
   } catch (e) {
     return []
   }
@@ -46,7 +56,7 @@ const filteredCommands = computed(() => {
 async function loadData() {
   try {
     categories.value = getCategoryTree() // 树形分类用于侧边栏
-    commands.value = getCommands()
+    commands.value = getCommands(null, archMode.value)
   } catch (e) {
     console.error('Load data failed:', e)
   }
@@ -120,7 +130,9 @@ function saveCommand(data) {
       data.content,
       data.categoryId,
       data.description,
-      data.tags
+      data.tags,
+      data.centralizedContent || '',
+      data.distributedContent || ''
     )
     showToast('命令已更新')
   } else {
@@ -129,7 +141,9 @@ function saveCommand(data) {
       data.content,
       data.categoryId,
       data.description,
-      data.tags
+      data.tags,
+      data.centralizedContent || '',
+      data.distributedContent || ''
     )
     showToast('命令已添加')
   }
@@ -199,6 +213,34 @@ function refreshData() {
 
     <!-- Header / Toolbar -->
     <header class="h-12 border-b border-border flex items-center px-4 gap-4 bg-background sticky top-0 z-10">
+      <!-- Architecture Switch -->
+      <div class="flex gap-1 flex-shrink-0 bg-bg-secondary rounded p-1">
+        <button
+          class="px-3 py-1 rounded text-sm font-medium transition-colors"
+          :class="archMode === 'centralized' ? 'bg-blue-600 text-white' : 'text-secondary hover:text-primary'"
+          @click="switchArchMode('centralized')"
+          title="集中式架构"
+        >
+          🔵 集中式
+        </button>
+        <button
+          class="px-3 py-1 rounded text-sm font-medium transition-colors"
+          :class="archMode === 'distributed' ? 'bg-green-600 text-white' : 'text-secondary hover:text-primary'"
+          @click="switchArchMode('distributed')"
+          title="分布式架构"
+        >
+          🟢 分布式
+        </button>
+        <button
+          class="px-3 py-1 rounded text-sm font-medium transition-colors"
+          :class="archMode === 'both' ? 'bg-gray-600 text-white' : 'text-secondary hover:text-primary'"
+          @click="switchArchMode('both')"
+          title="显示全部"
+        >
+          ⚪ 全部
+        </button>
+      </div>
+
       <SearchBar
         :keyword="searchKeyword"
         @search="handleSearch"
@@ -248,6 +290,7 @@ function refreshData() {
             v-for="cmd in filteredCommands"
             :key="cmd.id"
             :command="cmd"
+            :archMode="archMode"
             @edit="openEditCommand"
             @delete="handleDeleteCommand"
             @copy="handleCopyCommand"
@@ -261,6 +304,7 @@ function refreshData() {
       v-if="showCommandModal"
       :command="editingCommand"
       :categories="categories"
+      :archMode="archMode"
       @close="showCommandModal = false"
       @save="saveCommand"
     />

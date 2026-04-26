@@ -62,6 +62,8 @@ function createTables() {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
       content TEXT NOT NULL,
+      centralized_content TEXT,
+      distributed_content TEXT,
       category_id INTEGER,
       description TEXT,
       tags TEXT,
@@ -71,15 +73,31 @@ function createTables() {
   `);
 }
 
-// 兼容已有数据：检查并添加 parent_id 列
+// 兼容已有数据：检查并添加新列
 function migrateDatabase() {
   try {
-    const columns = db.exec('PRAGMA table_info(categories)');
-    if (columns.length) {
-      const hasParentId = columns[0].values.some(col => col[1] === 'parent_id');
+    // 检查 categories 表的 parent_id 列
+    const catColumns = db.exec('PRAGMA table_info(categories)');
+    if (catColumns.length) {
+      const hasParentId = catColumns[0].values.some(col => col[1] === 'parent_id');
       if (!hasParentId) {
         db.run('ALTER TABLE categories ADD COLUMN parent_id INTEGER DEFAULT NULL');
-        console.log('Database migrated: added parent_id column');
+        console.log('Database migrated: added parent_id column to categories');
+      }
+    }
+
+    // 检查 commands 表的架构相关列
+    const cmdColumns = db.exec('PRAGMA table_info(commands)');
+    if (cmdColumns.length) {
+      const hasCentralized = cmdColumns[0].values.some(col => col[1] === 'centralized_content');
+      const hasDistributed = cmdColumns[0].values.some(col => col[1] === 'distributed_content');
+      if (!hasCentralized) {
+        db.run('ALTER TABLE commands ADD COLUMN centralized_content TEXT');
+        console.log('Database migrated: added centralized_content column');
+      }
+      if (!hasDistributed) {
+        db.run('ALTER TABLE commands ADD COLUMN distributed_content TEXT');
+        console.log('Database migrated: added distributed_content column');
       }
     }
   } catch (e) {
@@ -279,11 +297,13 @@ export function findCategoryByName(name, parentId = null) {
 
 // ========== 命令操作 ==========
 
-export function getCommands(categoryId = null) {
+// 获取命令列表，支持按架构筛选
+export function getCommands(categoryId = null, archMode = 'both') {
   if (!db) return [];
 
   let sql = `
-    SELECT c.id, c.name, c.content, c.description, c.tags, c.sort_order, c.category_id,
+    SELECT c.id, c.name, c.content, c.centralized_content, c.distributed_content,
+           c.description, c.tags, c.sort_order, c.category_id,
            cat.name as category_name, cat.color as category_color, cat.parent_id as category_parent_id,
            parent.name as parent_category_name, parent.color as parent_category_color
     FROM commands c
@@ -307,19 +327,40 @@ export function getCommands(categoryId = null) {
     id: row[0],
     name: row[1],
     content: row[2],
-    description: row[3] || '',
-    tags: row[4] || '',
-    sortOrder: row[5],
-    categoryId: row[6],
-    categoryName: row[7] || '',
-    categoryColor: row[8] || '#0066CC',
-    categoryParentId: row[9],
-    parentCategoryName: row[10] || '',
-    parentCategoryColor: row[11] || '#0066CC'
+    centralizedContent: row[3] || '',
+    distributedContent: row[4] || '',
+    description: row[5] || '',
+    tags: row[6] || '',
+    sortOrder: row[7],
+    categoryId: row[8],
+    categoryName: row[9] || '',
+    categoryColor: row[10] || '#0066CC',
+    categoryParentId: row[11],
+    parentCategoryName: row[12] || '',
+    parentCategoryColor: row[13] || '#0066CC'
   }));
 }
 
-export function addCommand(name, content, categoryId, description, tags) {
+// 根据架构模式获取命令内容
+export function getCommandContentByArch(cmd, archMode) {
+  if (archMode === 'centralized') {
+    return cmd.centralizedContent || cmd.content;
+  } else if (archMode === 'distributed') {
+    return cmd.distributedContent || cmd.content;
+  }
+  return cmd.content;
+}
+
+// 判断命令是否有架构专用内容
+export function hasArchContent(cmd) {
+  return {
+    hasCentralized: cmd.centralizedContent && cmd.centralizedContent.trim() !== '',
+    hasDistributed: cmd.distributedContent && cmd.distributedContent.trim() !== '',
+    hasCommon: cmd.content && cmd.content.trim() !== ''
+  };
+}
+
+export function addCommand(name, content, categoryId, description, tags, centralizedContent = '', distributedContent = '') {
   const maxOrderResult = db.exec('SELECT MAX(sort_order) FROM commands');
   const maxOrder = maxOrderResult.length && maxOrderResult[0].values[0][0]
     ? maxOrderResult[0].values[0][0] + 1
@@ -328,18 +369,18 @@ export function addCommand(name, content, categoryId, description, tags) {
   const finalCategoryId = (categoryId === null || categoryId === undefined || categoryId === 0) ? null : categoryId;
 
   db.run(
-    `INSERT INTO commands (name, content, category_id, description, tags, sort_order) VALUES (?, ?, ?, ?, ?, ?)`,
-    [name, content, finalCategoryId, description || '', tags || '', maxOrder]
+    `INSERT INTO commands (name, content, centralized_content, distributed_content, category_id, description, tags, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [name, content, centralizedContent, distributedContent, finalCategoryId, description || '', tags || '', maxOrder]
   );
   const newId = db.exec('SELECT last_insert_rowid()')[0].values[0][0];
   saveDB();
   return newId;
 }
 
-export function updateCommand(id, name, content, categoryId, description, tags) {
+export function updateCommand(id, name, content, categoryId, description, tags, centralizedContent = '', distributedContent = '') {
   db.run(
-    `UPDATE commands SET name = ?, content = ?, category_id = ?, description = ?, tags = ? WHERE id = ?`,
-    [name, content, categoryId || null, description || '', tags || '', id]
+    `UPDATE commands SET name = ?, content = ?, centralized_content = ?, distributed_content = ?, category_id = ?, description = ?, tags = ? WHERE id = ?`,
+    [name, content, centralizedContent, distributedContent, categoryId || null, description || '', tags || '', id]
   );
   saveDB();
 }
@@ -349,35 +390,38 @@ export function deleteCommand(id) {
   saveDB();
 }
 
-export function searchCommands(keyword) {
+export function searchCommands(keyword, archMode = 'both') {
   if (!db) return [];
-  if (!keyword.trim()) return getCommands();
+  if (!keyword.trim()) return getCommands(null, archMode);
 
   const result = db.exec(`
-    SELECT c.id, c.name, c.content, c.description, c.tags, c.sort_order, c.category_id,
+    SELECT c.id, c.name, c.content, c.centralized_content, c.distributed_content,
+           c.description, c.tags, c.sort_order, c.category_id,
            cat.name as category_name, cat.color as category_color, cat.parent_id as category_parent_id,
            parent.name as parent_category_name, parent.color as parent_category_color
     FROM commands c
     LEFT JOIN categories cat ON c.category_id = cat.id
     LEFT JOIN categories parent ON cat.parent_id = parent.id
-    WHERE c.name LIKE ? OR c.content LIKE ? OR c.description LIKE ? OR c.tags LIKE ?
+    WHERE c.name LIKE ? OR c.content LIKE ? OR c.centralized_content LIKE ? OR c.distributed_content LIKE ? OR c.description LIKE ? OR c.tags LIKE ?
     ORDER BY c.sort_order DESC
-  `, [`%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`]);
+  `, [`%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`]);
 
   if (!result.length) return [];
   return result[0].values.map(row => ({
     id: row[0],
     name: row[1],
     content: row[2],
-    description: row[3] || '',
-    tags: row[4] || '',
-    sortOrder: row[5],
-    categoryId: row[6],
-    categoryName: row[7] || '',
-    categoryColor: row[8] || '#0066CC',
-    categoryParentId: row[9],
-    parentCategoryName: row[10] || '',
-    parentCategoryColor: row[11] || '#0066CC'
+    centralizedContent: row[3] || '',
+    distributedContent: row[4] || '',
+    description: row[5] || '',
+    tags: row[6] || '',
+    sortOrder: row[7],
+    categoryId: row[8],
+    categoryName: row[9] || '',
+    categoryColor: row[10] || '#0066CC',
+    categoryParentId: row[11],
+    parentCategoryName: row[12] || '',
+    parentCategoryColor: row[13] || '#0066CC'
   }));
 }
 

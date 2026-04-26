@@ -1,12 +1,14 @@
 import * as XLSX from 'xlsx';
 
-// 导出命令到 Excel（支持二级分类）
+// 导出命令到 Excel（支持二级分类和架构）
 export function exportToExcel(commands, filename = 'commands.xlsx') {
   const data = commands.map(cmd => ({
     '一级分类': cmd.parentCategoryName || '',
     '二级分类': cmd.categoryName || '',
     '名称': cmd.name,
-    '命令': cmd.content,
+    '通用命令': cmd.content || '',
+    '集中式命令': cmd.centralizedContent || '',
+    '分布式命令': cmd.distributedContent || '',
     '描述': cmd.description || '',
     '标签': cmd.tags || ''
   }));
@@ -20,7 +22,9 @@ export function exportToExcel(commands, filename = 'commands.xlsx') {
     { wch: 15 },  // 一级分类
     { wch: 15 },  // 二级分类
     { wch: 20 },  // 名称
-    { wch: 50 },  // 命令
+    { wch: 50 },  // 通用命令
+    { wch: 50 },  // 集中式命令
+    { wch: 50 },  // 分布式命令
     { wch: 30 },  // 描述
     { wch: 20 },  // 标签
   ];
