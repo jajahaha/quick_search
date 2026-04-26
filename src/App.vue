@@ -13,11 +13,8 @@ import { copyToClipboard } from './utils/clipboard.js'
 // 皮肤主题配置
 const THEME_KEY = 'gaussdb_theme'
 const themes = [
-  { id: 'default', name: '默认', icon: '⚪' },
-  { id: 'dark', name: '深色', icon: '🌙' },
-  { id: 'blue', name: '蓝色', icon: '🔵' },
-  { id: 'green', name: '绿色', icon: '🟢' },
-  { id: 'purple', name: '紫色', icon: '🟣' }
+  { id: 'default', name: '浅色', icon: '👔' },
+  { id: 'dark', name: '深色', icon: '🧥' }
 ]
 const currentTheme = ref(localStorage.getItem(THEME_KEY) || 'default')
 const showThemeMenu = ref(false)

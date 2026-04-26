@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* 默认皮肤 - 白色 */
+/* 浅色皮肤 */
 :root, [data-theme="default"] {
   --color-primary: #37352F;
   --color-secondary: #787774;
@@ -26,45 +26,6 @@
   --color-background: #18181B;
   --color-bg-secondary: #27272A;
   --color-border: #3F3F46;
-}
-
-/* 蓝色皮肤 */
-[data-theme="blue"] {
-  --color-primary: #1E3A5F;
-  --color-secondary: #5A7A9A;
-  --color-accent: #0066CC;
-  --color-success: #0F7B6C;
-  --color-warning: #D9730D;
-  --color-error: #E03E3E;
-  --color-background: #E8F4FD;
-  --color-bg-secondary: #D0E8F8;
-  --color-border: #B8D4E8;
-}
-
-/* 绿色皮肤 */
-[data-theme="green"] {
-  --color-primary: #1A3A2A;
-  --color-secondary: #5A7A6A;
-  --color-accent: #0F7B6C;
-  --color-success: #0F7B6C;
-  --color-warning: #D9730D;
-  --color-error: #E03E3E;
-  --color-background: #E8F5E8;
-  --color-bg-secondary: #D0E8D0;
-  --color-border: #B8D8B8;
-}
-
-/* 紫色皮肤 */
-[data-theme="purple"] {
-  --color-primary: #2D1A4A;
-  --color-secondary: #6A5A8A;
-  --color-accent: #7C3AED;
-  --color-success: #0F7B6C;
-  --color-warning: #D9730D;
-  --color-error: #E03E3E;
-  --color-background: #F3E8FF;
-  --color-bg-secondary: #E8D8F8;
-  --color-border: #D8C8E8;
 }
 
 @layer base {
