@@ -5,7 +5,8 @@ import draggable from 'vuedraggable'
 
 const props = defineProps({
   categories: Array,
-  selectedId: Number | null
+  selectedId: Number | null,
+  refreshTime: Number // 刷新时间戳
 })
 
 const emit = defineEmits(['select', 'add', 'edit', 'refresh'])
@@ -21,10 +22,10 @@ onMounted(() => {
   commandCounts.value = getCategoryCommandCounts()
 })
 
-// 监听分类变化，更新命令数量
-watch(() => props.categories, () => {
+// 监听刷新时间戳变化，更新命令数量
+watch(() => props.refreshTime, () => {
   commandCounts.value = getCategoryCommandCounts()
-}, { deep: true })
+})
 
 // 本地分类列表（用于拖拽）
 const localCategories = computed(() => props.categories)

@@ -43,6 +43,7 @@ const selectedCategoryId = ref(null)
 const searchKeyword = ref('')
 const isLoading = ref(true)
 const initError = ref(null)
+const lastRefreshTime = ref(Date.now()) // 刷新时间戳，用于触发子组件更新
 
 // 弹窗状态
 const showCommandModal = ref(false)
@@ -80,6 +81,7 @@ async function loadData() {
   try {
     categories.value = getCategoryTree() // 树形分类用于侧边栏
     commands.value = getCommands(null, archMode.value) // 加载所有命令
+    lastRefreshTime.value = Date.now() // 更新刷新时间戳
   } catch (e) {
     console.error('Load data failed:', e)
   }
@@ -300,6 +302,7 @@ function refreshData() {
       <Sidebar
         :categories="categories"
         :selectedId="selectedCategoryId"
+        :refreshTime="lastRefreshTime"
         @select="selectCategory"
         @add="openAddCategory"
         @edit="openEditCategory"
