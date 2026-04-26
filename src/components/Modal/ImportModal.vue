@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue'
-import { getCommands, getCategories, addCommand, addCategory, exportDatabaseFile, importDatabaseFile, clearAllData } from '../../utils/database.js'
+import { getCommands, getCategories, addCommand, addCategory, exportDatabaseFile, importDatabaseFile, clearAllData, debugDatabase } from '../../utils/database.js'
 import { exportToExcel, parseExcelFile } from '../../utils/excel.js'
 
 const emit = defineEmits(['close', 'refresh', 'toast'])
@@ -71,6 +71,7 @@ async function handleImportExcel(event) {
     })
 
     console.log('=== Import Complete: ' + importedCount + ' commands ===')
+    debugDatabase()
 
     emit('toast', `成功导入 ${importedCount} 条命令`)
     emit('refresh')

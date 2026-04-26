@@ -171,7 +171,11 @@ export function getCommands(categoryId = null) {
   }
   sql += ' ORDER BY c.sort_order DESC, c.id DESC';
 
+  console.log('getCommands SQL:', sql, 'params:', params);
+
   const result = db.exec(sql, params);
+  console.log('getCommands result:', result.length ? result[0].values.length : 0, 'rows');
+
   if (!result.length) return [];
   return result[0].values.map(row => ({
     id: row[0],
@@ -284,4 +288,14 @@ export function clearAllData() {
   db.run('DELETE FROM commands');
   db.run('DELETE FROM categories');
   saveDB();
+}
+
+// 调试：查看数据库完整状态
+export function debugDatabase() {
+  console.log('=== Database Debug ===');
+  const categories = db.exec('SELECT id, name FROM categories');
+  console.log('Categories:', categories.length ? categories[0].values : []);
+  const commands = db.exec('SELECT id, name, category_id FROM commands');
+  console.log('Commands:', commands.length ? commands[0].values : []);
+  console.log('=== End Debug ===');
 }
