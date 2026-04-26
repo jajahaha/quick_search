@@ -112,25 +112,16 @@ function insertTestData() {
     return;
   }
 
-  // 一级分类
+  // 一级分类（GaussDB 相关）
   const categories = [
-    { name: 'Git', color: '#0F7B6C', parentId: null },
-    { name: 'NPM', color: '#E03E3E', parentId: null },
-    { name: 'Docker', color: '#14B8A6', parentId: null },
-    { name: '系统', color: '#7C3AED', parentId: null }
+    { name: 'Git', color: '#0F7B6C' },      // 绿色
+    { name: '集群', color: '#E03E3E' },     // 红色
+    { name: '实时会话', color: '#7C3AED' }  // 紫色
   ];
 
   categories.forEach(cat => {
-    db.run('INSERT INTO categories (name, color, parent_id) VALUES (?, ?, ?)', [cat.name, cat.color, cat.parentId]);
+    db.run('INSERT INTO categories (name, color, parent_id) VALUES (?, ?, NULL)', [cat.name, cat.color]);
   });
-
-  // 二级分类（使用父分类颜色的浅色版本）
-  const subCategories = [
-    { name: '提交相关', parentId: 1 },
-    { name: '分支管理', parentId: 1 },
-    { name: '容器操作', parentId: 3 },
-    { name: '镜像管理', parentId: 3 }
-  ];
 
   // 颜色浅化函数（增加亮度）
   function lightenColor(hex) {
@@ -141,50 +132,50 @@ function insertTestData() {
     return `#${lighten(r).toString(16).padStart(2, '0')}${lighten(g).toString(16).padStart(2, '0')}${lighten(b).toString(16).padStart(2, '0')}`;
   }
 
-  // 获取父分类颜色
-  const parentColors = {};
-  categories.forEach((cat, idx) => {
-    parentColors[idx + 1] = cat.color;
-  });
+  // 二级分类（使用父分类颜色的浅色版本）
+  // Git(1) → 提交相关(4), 分支管理(5)
+  // 集群(2) → 查询(6), 变更(7)
+  // 实时会话(3) → 查询(8)
+  const subCategories = [
+    { name: '提交相关', parentId: 1, parentColor: '#0F7B6C' },
+    { name: '分支管理', parentId: 1, parentColor: '#0F7B6C' },
+    { name: '查询', parentId: 2, parentColor: '#E03E3E' },
+    { name: '变更', parentId: 2, parentColor: '#E03E3E' },
+    { name: '查询', parentId: 3, parentColor: '#7C3AED' }
+  ];
 
   subCategories.forEach(cat => {
-    const parentColor = parentColors[cat.parentId] || '#0066CC';
-    const lightColor = lightenColor(parentColor);
+    const lightColor = lightenColor(cat.parentColor);
     db.run('INSERT INTO categories (name, color, parent_id) VALUES (?, ?, ?)', [cat.name, lightColor, cat.parentId]);
   });
 
-  // 命令（关联到二级分类）
+  // 命令数据
+  // categoryId: Git提交相关=4, Git分支管理=5, 集群查询=6, 集群变更=7, 实时会话查询=8
   const commands = [
-    { name: 'Git 提交', content: 'git commit -m "message"', categoryId: 5, description: '提交代码到本地仓库', tags: 'git,commit,基础' },
-    { name: 'Git 推送', content: 'git push origin main', categoryId: 5, description: '推送代码到远程仓库', tags: 'git,push,远程' },
-    { name: 'Git 拉取', content: 'git pull origin main', categoryId: 5, description: '拉取远程代码到本地', tags: 'git,pull,远程' },
-    { name: 'Git 撤销修改', content: 'git checkout -- <file>', categoryId: 5, description: '撤销文件修改', tags: 'git,checkout,撤销' },
-    { name: 'Git 创建分支', content: 'git branch <branch-name>', categoryId: 6, description: '创建新分支', tags: 'git,branch,分支' },
-    { name: 'Git 切换分支', content: 'git checkout <branch-name>', categoryId: 6, description: '切换到指定分支', tags: 'git,checkout,分支' },
-    { name: 'Git 合并分支', content: 'git merge <branch-name>', categoryId: 6, description: '合并指定分支到当前分支', tags: 'git,merge,分支' },
-    { name: 'Git 查看状态', content: 'git status', categoryId: 5, description: '查看当前工作区状态', tags: 'git,status,查看' },
-    { name: 'Git 查看日志', content: 'git log --oneline -10', categoryId: 5, description: '查看最近10条提交记录', tags: 'git,log,查看' },
-    { name: 'NPM 安装依赖', content: 'npm install', categoryId: 2, description: '安装项目依赖', tags: 'npm,install,依赖' },
-    { name: 'NPM 运行项目', content: 'npm run dev', categoryId: 2, description: '启动开发服务器', tags: 'npm,dev,运行' },
-    { name: 'NPM 构建项目', content: 'npm run build', categoryId: 2, description: '构建生产版本', tags: 'npm,build,构建' },
-    { name: 'NPM 清理缓存', content: 'npm cache clean --force', categoryId: 2, description: '清理npm缓存', tags: 'npm,cache,清理' },
-    { name: 'Docker 查看容器', content: 'docker ps', categoryId: 7, description: '查看运行中的容器', tags: 'docker,ps,查看' },
-    { name: 'Docker 启动容器', content: 'docker run -d --name <name> <image>', categoryId: 7, description: '启动一个新容器', tags: 'docker,run,启动' },
-    { name: 'Docker 停止容器', content: 'docker stop <container_id>', categoryId: 7, description: '停止运行中的容器', tags: 'docker,stop,停止' },
-    { name: 'Docker 进入容器', content: 'docker exec -it <container_id> bash', categoryId: 7, description: '进入容器终端', tags: 'docker,exec,终端' },
-    { name: 'Docker 查看镜像', content: 'docker images', categoryId: 8, description: '查看所有镜像', tags: 'docker,images,查看' },
-    { name: 'Docker 拉取镜像', content: 'docker pull <image>', categoryId: 8, description: '拉取远程镜像', tags: 'docker,pull,镜像' },
-    { name: 'Docker 删除镜像', content: 'docker rmi <image_id>', categoryId: 8, description: '删除本地镜像', tags: 'docker,rmi,镜像' },
-    { name: '查看端口占用', content: 'netstat -ano | findstr :<port>', categoryId: 4, description: 'Windows查看端口占用', tags: 'netstat,端口,Windows' },
-    { name: '强制结束进程', content: 'taskkill /F /PID <pid>', categoryId: 4, description: '强制结束指定进程', tags: 'taskkill,进程,Windows' },
-    { name: '查看系统信息', content: 'systeminfo', categoryId: 4, description: '查看系统详细信息', tags: 'systeminfo,系统,Windows' },
-    { name: 'Ping 测试', content: 'ping <host>', categoryId: 4, description: '测试网络连通性', tags: 'ping,网络,测试' },
+    // Git 提交相关
+    { name: 'Git 查看日志', content: 'git log --oneline -10', categoryId: 4, description: '查看最近10条提交记录', tags: 'git,log,查看' },
+    { name: 'Git 查看状态', content: 'git status', categoryId: 4, description: '查看当前工作区状态', tags: 'git,status,查看' },
+    { name: 'Git 撤销修改', content: 'git checkout -- <file>', categoryId: 4, description: '撤销文件修改', tags: 'git,checkout,撤销' },
+    { name: 'Git 拉取', content: 'git pull origin main', categoryId: 4, description: '拉取远程代码到本地', tags: 'git,pull,远程' },
+    { name: 'Git 推送', content: 'git push origin main', categoryId: 4, description: '推送代码到远程仓库', tags: 'git,push,远程' },
+    { name: 'Git 提交', content: 'git commit -m "message"', categoryId: 4, description: '提交代码到本地仓库', tags: 'git,commit,基础' },
+    // Git 分支管理
+    { name: 'Git 合并分支', content: 'git merge <branch-name>', categoryId: 5, description: '合并指定分支到当前分支', tags: 'git,merge,分支' },
+    { name: 'Git 切换分支', content: 'git checkout <branch-name>', categoryId: 5, description: '切换到指定分支', tags: 'git,checkout,分支' },
+    { name: 'Git 创建分支', content: 'git branch <branch-name>', categoryId: 5, description: '创建新分支', tags: 'git,branch,分支' },
+    // 集群 查询
+    { name: '查询状态', content: 'cm_ctl query -cv', categoryId: 6, description: '', tags: '' },
+    // 集群 变更
+    { name: '重平衡', content: 'cm_ctl query switchover -a', categoryId: 7, description: '', tags: '' },
+    // 实时会话 查询（集中式/分布式）
+    { name: '会话详情', content: '', centralizedContent: 'Select * from pg_stat_activity;', distributedContent: 'Select * from pgxc_stat_activity;', categoryId: 8, description: '', tags: '' },
+    { name: '会话状态', content: '', centralizedContent: 'Select state, count(1) from pg_stat_activity group by 1 order by 2 desc;', distributedContent: 'Select state, count(1) from pgxc_stat_activity group by 1 order by 2 desc;', categoryId: 8, description: '', tags: '' }
   ];
 
-  commands.forEach(cmd => {
+  commands.forEach((cmd, idx) => {
     db.run(
-      'INSERT INTO commands (name, content, category_id, description, tags, sort_order) VALUES (?, ?, ?, ?, ?, ?)',
-      [cmd.name, cmd.content, cmd.categoryId, cmd.description, cmd.tags, cmd.name.length * 10]
+      'INSERT INTO commands (name, content, centralized_content, distributed_content, category_id, description, tags, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [cmd.name, cmd.content || '', cmd.centralizedContent || '', cmd.distributedContent || '', cmd.categoryId, cmd.description || '', cmd.tags || '', idx * 10]
     );
   });
 }
