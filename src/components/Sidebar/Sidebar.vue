@@ -132,7 +132,7 @@ function toggleAllExpand() {
           @click.stop="toggleAllExpand"
           :title="isAllExpanded() ? '全部折叠' : '全部展开'"
         >
-          {{ isAllExpanded() ? '◀' : '▶' }}
+          {{ isAllExpanded() ? '▼' : '▶' }}
         </button>
       </div>
 
