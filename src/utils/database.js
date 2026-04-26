@@ -129,30 +129,34 @@ function insertTestData() {
     db.run('INSERT INTO categories (name, color, parent_id, sort_order) VALUES (?, ?, NULL, ?)', [cat.name, cat.color, idx]);
   });
 
-  // 颜色浅化函数（增加亮度）
-  function lightenColor(hex) {
+  // 颜色渐变函数（按索引调整亮度，形成渐变）
+  function gradientColor(hex, index, total) {
     const r = parseInt(hex.slice(1, 3), 16);
     const g = parseInt(hex.slice(3, 5), 16);
     const b = parseInt(hex.slice(5, 7), 16);
-    const lighten = (c) => Math.min(255, Math.floor(c + (255 - c) * 0.5));
+    // 从原色到浅色渐变，index 从0开始
+    const factor = 0.2 + (index / (total - 1 || 1)) * 0.5; // 20% ~ 70% 亮度增加
+    const lighten = (c) => Math.min(255, Math.floor(c + (255 - c) * factor));
     return `#${lighten(r).toString(16).padStart(2, '0')}${lighten(g).toString(16).padStart(2, '0')}${lighten(b).toString(16).padStart(2, '0')}`;
   }
 
-  // 二级分类（使用父分类颜色的浅色版本）
+  // 二级分类（按索引渐变颜色）
   // Git(1) → 提交相关(4), 分支管理(5)
   // 集群(2) → 查询(6), 变更(7)
   // 实时会话(3) → 查询(8)
-  const subCategories = [
-    { name: '提交相关', parentId: 1, parentColor: '#0F7B6C' },
-    { name: '分支管理', parentId: 1, parentColor: '#0F7B6C' },
-    { name: '查询', parentId: 2, parentColor: '#E03E3E' },
-    { name: '变更', parentId: 2, parentColor: '#E03E3E' },
-    { name: '查询', parentId: 3, parentColor: '#7C3AED' }
-  ];
+  const subCategoriesByParent = {
+    1: [{ name: '提交相关' }, { name: '分支管理' }],
+    2: [{ name: '查询' }, { name: '变更' }],
+    3: [{ name: '查询' }]
+  };
+  const parentColors = { 1: '#0F7B6C', 2: '#E03E3E', 3: '#7C3AED' };
 
-  subCategories.forEach(cat => {
-    const lightColor = lightenColor(cat.parentColor);
-    db.run('INSERT INTO categories (name, color, parent_id) VALUES (?, ?, ?)', [cat.name, lightColor, cat.parentId]);
+  Object.entries(subCategoriesByParent).forEach(([parentId, children]) => {
+    const parentColor = parentColors[parentId];
+    children.forEach((cat, idx) => {
+      const gradient = gradientColor(parentColor, idx, children.length);
+      db.run('INSERT INTO categories (name, color, parent_id) VALUES (?, ?, ?)', [cat.name, gradient, parseInt(parentId)]);
+    });
   });
 
   // 命令数据

@@ -26,12 +26,14 @@ function getRandomColor(usedColors) {
   return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`
 }
 
-// 颜色浅化函数（增加亮度）
-function lightenColor(hex) {
+// 颜色渐变函数（按索引调整亮度，形成渐变）
+function gradientColor(hex, index) {
   const r = parseInt(hex.slice(1, 3), 16)
   const g = parseInt(hex.slice(3, 5), 16)
   const b = parseInt(hex.slice(5, 7), 16)
-  const lighten = (c) => Math.min(255, Math.floor(c + (255 - c) * 0.5))
+  // 从原色到浅色渐变，亮度递增
+  const factor = 0.2 + index * 0.15 // 每个递增15%，从20%开始
+  const lighten = (c) => Math.min(255, Math.floor(c + (255 - c) * factor))
   return `#${lighten(r).toString(16).padStart(2, '0')}${lighten(g).toString(16).padStart(2, '0')}${lighten(b).toString(16).padStart(2, '0')}`
 }
 
@@ -50,6 +52,8 @@ async function handleImportExcel(event) {
     const parentColorMap = new Map()
     // 记录已使用的颜色
     const usedColors = []
+    // 记录每个一级分类下已创建的二级分类数量（用于渐变）
+    const parentChildIndexMap = new Map()
 
     allCategories.forEach(c => {
       if (c.parentId === null) {
@@ -58,6 +62,7 @@ async function handleImportExcel(event) {
         categoryMap.set(c.name.trim().toLowerCase(), c.id)
         parentColorMap.set(c.id, c.color)
         usedColors.push(c.color)
+        parentChildIndexMap.set(c.id, 0) // 初始化二级分类计数
       } else {
         // 二级分类，找到父分类名
         const parent = allCategories.find(p => p.id === c.parentId)
@@ -65,6 +70,9 @@ async function handleImportExcel(event) {
           const key = `${parent.name.trim()}/${c.name.trim()}`
           categoryMap.set(key, c.id)
           categoryMap.set(key.toLowerCase(), c.id)
+          // 增加父分类的二级分类计数
+          const count = parentChildIndexMap.get(c.parentId) || 0
+          parentChildIndexMap.set(c.parentId, count + 1)
         }
       }
     })
@@ -107,14 +115,17 @@ async function handleImportExcel(event) {
               categoryMap.set(parentCategoryName, parentId)
               categoryMap.set(parentCategoryName.toLowerCase(), parentId)
               parentColorMap.set(parentId, parentColor)
+              parentChildIndexMap.set(parentId, 0) // 初始化二级分类计数
               usedColors.push(parentColor)
             }
           }
 
-          // 创建二级分类，使用父分类的浅色版本
+          // 创建二级分类，使用渐变颜色
           const parentColor = parentColorMap.get(parentId) || '#0066CC'
-          const childColor = lightenColor(parentColor)
+          const childIndex = parentChildIndexMap.get(parentId) || 0
+          const childColor = gradientColor(parentColor, childIndex)
           categoryId = addCategory(childCategoryName, childColor, parentId)
+          parentChildIndexMap.set(parentId, childIndex + 1) // 更新计数
           categoryMap.set(key, categoryId)
           categoryMap.set(lowerKey, categoryId)
         }
@@ -131,6 +142,7 @@ async function handleImportExcel(event) {
           categoryMap.set(parentCategoryName, categoryId)
           categoryMap.set(parentCategoryName.toLowerCase(), categoryId)
           parentColorMap.set(categoryId, parentColor)
+          parentChildIndexMap.set(categoryId, 0) // 初始化二级分类计数
           usedColors.push(parentColor)
         }
       }
