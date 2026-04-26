@@ -12,13 +12,17 @@ const emit = defineEmits(['select', 'add', 'edit', 'refresh'])
 const isCollapsed = ref(false)
 const expandedCategories = ref(new Set()) // 记录展开的分类
 
-// 选择分类（点击一级分类自动展开）
+// 选择分类（点击一级分类切换展开/折叠）
 function handleSelect(id) {
   emit('select', id)
-  // 如果点击的是一级分类且有子分类，自动展开
+  // 如果点击的是一级分类且有子分类，切换展开状态
   const cat = props.categories.find(c => c.id === id)
   if (cat && cat.children && cat.children.length > 0) {
-    expandedCategories.value.add(id)
+    if (expandedCategories.value.has(id)) {
+      expandedCategories.value.delete(id)
+    } else {
+      expandedCategories.value.add(id)
+    }
   }
 }
 
