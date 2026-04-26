@@ -1,4 +1,4 @@
-# 快捷命令管理器 - Release Notes
+# GaussDB快捷命令管理器 - Release Notes
 
 ---
 

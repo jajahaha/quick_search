@@ -207,7 +207,7 @@ function refreshData() {
       <div class="absolute inset-0 bg-gradient-to-r from-slate-900/50 to-transparent"></div>
       <div class="relative flex items-center justify-center gap-3">
         <span class="text-3xl">⚡</span>
-        <h1 class="text-2xl font-bold tracking-wide">快捷命令管理器</h1>
+        <h1 class="text-2xl font-bold tracking-wide">GaussDB快捷命令管理器</h1>
       </div>
     </div>
 
