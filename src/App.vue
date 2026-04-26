@@ -186,10 +186,14 @@ function refreshData() {
 <template>
   <div class="min-h-screen flex flex-col">
     <!-- Title Bar -->
-    <div class="bg-gradient-to-r from-slate-800 to-slate-700 text-white px-6 py-4">
-      <div class="flex items-center gap-3">
-        <span class="text-2xl">⚡</span>
-        <h1 class="text-xl font-bold tracking-wide">快捷命令管理器</h1>
+    <div
+      class="relative text-white px-6 py-5 overflow-hidden"
+      style="background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.85)), url('https://images.unsplash.com/photo-1557683316-973df3baf1c3?w=1200&q=80') center/cover no-repeat;"
+    >
+      <div class="absolute inset-0 bg-gradient-to-r from-slate-900/50 to-transparent"></div>
+      <div class="relative flex items-center justify-center gap-3">
+        <span class="text-3xl">⚡</span>
+        <h1 class="text-2xl font-bold tracking-wide">快捷命令管理器</h1>
       </div>
     </div>
 
