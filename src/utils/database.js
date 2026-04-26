@@ -536,8 +536,8 @@ export function restoreDefaultData() {
   // 删除数据库中的所有数据
   db.run('DELETE FROM commands');
   db.run('DELETE FROM categories');
-  // 删除 localStorage 缓存，让下次刷新重新生成测试数据
-  localStorage.removeItem(DB_KEY);
+  // 重新生成测试数据
+  insertTestData();
   saveDB();
 }
 
