@@ -8,6 +8,33 @@ const emit = defineEmits(['close', 'refresh', 'toast'])
 const importMode = ref('excel')  // 'excel' | 'db'
 const exportMode = ref('excel')  // 'excel' | 'db'
 
+// 预定义的一级分类颜色
+const categoryColors = [
+  '#0F7B6C', '#E03E3E', '#14B8A6', '#7C3AED', '#EC4899', '#F59E0B', '#3B82F6', '#10B981'
+]
+
+// 生成随机颜色
+function getRandomColor(usedColors) {
+  const available = categoryColors.filter(c => !usedColors.includes(c))
+  if (available.length > 0) {
+    return available[Math.floor(Math.random() * available.length)]
+  }
+  // 如果预定义颜色都用完了，生成随机颜色
+  const r = Math.floor(Math.random() * 128 + 64)
+  const g = Math.floor(Math.random() * 128 + 64)
+  const b = Math.floor(Math.random() * 128 + 64)
+  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`
+}
+
+// 颜色浅化函数（增加亮度）
+function lightenColor(hex) {
+  const r = parseInt(hex.slice(1, 3), 16)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = parseInt(hex.slice(5, 7), 16)
+  const lighten = (c) => Math.min(255, Math.floor(c + (255 - c) * 0.5))
+  return `#${lighten(r).toString(16).padStart(2, '0')}${lighten(g).toString(16).padStart(2, '0')}${lighten(b).toString(16).padStart(2, '0')}`
+}
+
 // 导入 Excel（支持二级分类和架构）
 async function handleImportExcel(event) {
   const file = event.target.files[0]
@@ -19,11 +46,18 @@ async function handleImportExcel(event) {
 
     // 构建分类映射：key 为 "一级分类/二级分类" 或 "一级分类"
     const categoryMap = new Map()
+    // 存储一级分类的颜色，用于二级分类继承
+    const parentColorMap = new Map()
+    // 记录已使用的颜色
+    const usedColors = []
+
     allCategories.forEach(c => {
       if (c.parentId === null) {
         // 一级分类
         categoryMap.set(c.name.trim(), c.id)
         categoryMap.set(c.name.trim().toLowerCase(), c.id)
+        parentColorMap.set(c.id, c.color)
+        usedColors.push(c.color)
       } else {
         // 二级分类，找到父分类名
         const parent = allCategories.find(p => p.id === c.parentId)
@@ -67,15 +101,20 @@ async function handleImportExcel(event) {
             } else if (categoryMap.has(parentCategoryName.toLowerCase())) {
               parentId = categoryMap.get(parentCategoryName.toLowerCase())
             } else {
-              // 创建一级分类
-              parentId = addCategory(parentCategoryName)
+              // 创建一级分类，分配随机颜色
+              const parentColor = getRandomColor(usedColors)
+              parentId = addCategory(parentCategoryName, parentColor)
               categoryMap.set(parentCategoryName, parentId)
               categoryMap.set(parentCategoryName.toLowerCase(), parentId)
+              parentColorMap.set(parentId, parentColor)
+              usedColors.push(parentColor)
             }
           }
 
-          // 创建二级分类
-          categoryId = addCategory(childCategoryName, '#0066CC', parentId)
+          // 创建二级分类，使用父分类的浅色版本
+          const parentColor = parentColorMap.get(parentId) || '#0066CC'
+          const childColor = lightenColor(parentColor)
+          categoryId = addCategory(childCategoryName, childColor, parentId)
           categoryMap.set(key, categoryId)
           categoryMap.set(lowerKey, categoryId)
         }
@@ -86,10 +125,13 @@ async function handleImportExcel(event) {
         } else if (categoryMap.has(parentCategoryName.toLowerCase())) {
           categoryId = categoryMap.get(parentCategoryName.toLowerCase())
         } else {
-          // 创建一级分类
-          categoryId = addCategory(parentCategoryName)
+          // 创建一级分类，分配随机颜色
+          const parentColor = getRandomColor(usedColors)
+          categoryId = addCategory(parentCategoryName, parentColor)
           categoryMap.set(parentCategoryName, categoryId)
           categoryMap.set(parentCategoryName.toLowerCase(), categoryId)
+          parentColorMap.set(categoryId, parentColor)
+          usedColors.push(parentColor)
         }
       }
 
