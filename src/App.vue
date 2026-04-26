@@ -90,7 +90,6 @@ function showToast(message, type = 'success') {
 
 // 选择分类
 function selectCategory(id) {
-  console.log('selectCategory called with id:', id, 'type:', typeof id)
   selectedCategoryId.value = id
   searchKeyword.value = ''
 }

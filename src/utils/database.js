@@ -139,9 +139,7 @@ export function getCategories() {
 
 export function addCategory(name, color = '#0066CC') {
   db.run('INSERT INTO categories (name, color) VALUES (?, ?)', [name, color]);
-  // 在 saveDB 之前获取 last_insert_rowid，避免被影响
   const newId = db.exec('SELECT last_insert_rowid()')[0].values[0][0];
-  console.log('addCategory:', name, 'newId:', newId);
   saveDB();
   return newId;
 }
@@ -174,11 +172,7 @@ export function getCommands(categoryId = null) {
   }
   sql += ' ORDER BY c.sort_order DESC, c.id DESC';
 
-  console.log('getCommands SQL:', sql, 'params:', params);
-
   const result = db.exec(sql, params);
-  console.log('getCommands result:', result.length ? result[0].values.length : 0, 'rows');
-
   if (!result.length) return [];
   return result[0].values.map(row => ({
     id: row[0],
@@ -194,22 +188,17 @@ export function getCommands(categoryId = null) {
 }
 
 export function addCommand(name, content, categoryId, description, tags) {
-  // 获取当前最大 sort_order，新命令排在前面
   const maxOrderResult = db.exec('SELECT MAX(sort_order) FROM commands');
   const maxOrder = maxOrderResult.length && maxOrderResult[0].values[0][0]
     ? maxOrderResult[0].values[0][0] + 1
     : 100;
 
-  // 确保 categoryId 正确处理：明确检查 null/undefined，否则保留原值
   const finalCategoryId = (categoryId === null || categoryId === undefined || categoryId === 0) ? null : categoryId;
-
-  console.log('addCommand:', name, 'categoryId:', categoryId, 'finalCategoryId:', finalCategoryId);
 
   db.run(
     `INSERT INTO commands (name, content, category_id, description, tags, sort_order) VALUES (?, ?, ?, ?, ?, ?)`,
     [name, content, finalCategoryId, description || '', tags || '', maxOrder]
   );
-  // 在 saveDB 之前获取 last_insert_rowid
   const newId = db.exec('SELECT last_insert_rowid()')[0].values[0][0];
   saveDB();
   return newId;
@@ -293,14 +282,4 @@ export function clearAllData() {
   db.run('DELETE FROM commands');
   db.run('DELETE FROM categories');
   saveDB();
-}
-
-// 调试：查看数据库完整状态
-export function debugDatabase() {
-  console.log('=== Database Debug ===');
-  const categories = db.exec('SELECT id, name FROM categories');
-  console.log('Categories:', categories.length ? categories[0].values : []);
-  const commands = db.exec('SELECT id, name, category_id FROM commands');
-  console.log('Commands:', commands.length ? commands[0].values : []);
-  console.log('=== End Debug ===');
 }

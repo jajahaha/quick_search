@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue'
-import { getCommands, getCategories, addCommand, addCategory, exportDatabaseFile, importDatabaseFile, clearAllData, debugDatabase } from '../../utils/database.js'
+import { getCommands, getCategories, addCommand, addCategory, exportDatabaseFile, importDatabaseFile, clearAllData } from '../../utils/database.js'
 import { exportToExcel, parseExcelFile } from '../../utils/excel.js'
 
 const emit = defineEmits(['close', 'refresh', 'toast'])
@@ -17,41 +17,28 @@ async function handleImportExcel(event) {
     const data = await parseExcelFile(file)
     const categories = getCategories()
 
-    console.log('=== Import Debug ===')
-    console.log('Existing categories:', categories)
-    console.log('Excel data rows:', data.length)
-
-    // 使用分类名作为 key，支持大小写不敏感匹配
+    // 支持大小写不敏感匹配分类名
     const categoryMap = new Map()
     categories.forEach(c => {
       categoryMap.set(c.name.trim().toLowerCase(), c.id)
-      categoryMap.set(c.name.trim(), c.id) // 同时保留原始名称匹配
+      categoryMap.set(c.name.trim(), c.id)
     })
 
-    console.log('Category map:', categoryMap)
-
     let importedCount = 0
-    data.forEach((row, index) => {
+    data.forEach(row => {
       const categoryName = row['分类'] ? row['分类'].trim() : ''
       let categoryId = null
 
-      console.log(`Row ${index}: categoryName="${categoryName}"`)
-
       if (categoryName) {
-        // 先尝试精确匹配，再尝试大小写不敏感匹配
         if (categoryMap.has(categoryName)) {
           categoryId = categoryMap.get(categoryName)
-          console.log(`  Matched exact: "${categoryName}" -> ID ${categoryId}`)
         } else if (categoryMap.has(categoryName.toLowerCase())) {
           categoryId = categoryMap.get(categoryName.toLowerCase())
-          console.log(`  Matched lowercase: "${categoryName}" -> ID ${categoryId}`)
         } else {
-          // 创建新分类
           const newId = addCategory(categoryName)
           categoryMap.set(categoryName, newId)
           categoryMap.set(categoryName.toLowerCase(), newId)
           categoryId = newId
-          console.log(`  Created new category: "${categoryName}" -> ID ${newId}`)
         }
       }
 
@@ -70,14 +57,10 @@ async function handleImportExcel(event) {
       }
     })
 
-    console.log('=== Import Complete: ' + importedCount + ' commands ===')
-    debugDatabase()
-
     emit('toast', `成功导入 ${importedCount} 条命令`)
     emit('refresh')
     emit('close')
   } catch (e) {
-    console.error('Import error:', e)
     emit('toast', '导入失败：' + e.message, 'error')
   }
 }
