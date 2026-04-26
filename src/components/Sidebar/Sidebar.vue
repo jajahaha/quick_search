@@ -76,6 +76,21 @@ function expandAll() {
 function collapseAll() {
   expandedCategories.value.clear()
 }
+
+// 是否全部展开
+function isAllExpanded() {
+  const expandableCount = props.categories.filter(cat => cat.children && cat.children.length > 0).length
+  return expandableCount > 0 && expandedCategories.value.size === expandableCount
+}
+
+// 切换全部展开/折叠
+function toggleAllExpand() {
+  if (isAllExpanded()) {
+    collapseAll()
+  } else {
+    expandAll()
+  }
+}
 </script>
 
 <template>
@@ -102,7 +117,7 @@ function collapseAll() {
     </button>
 
     <div v-if="!isCollapsed" class="flex-1 overflow-auto">
-      <!-- All Commands -->
+      <!-- All Commands with Expand/Collapse Toggle -->
       <div
         class="px-3 py-2 cursor-pointer hover:bg-bg-secondary rounded transition-colors flex items-center gap-2"
         :class="{ 'bg-bg-secondary font-medium': selectedId === null }"
@@ -110,15 +125,14 @@ function collapseAll() {
       >
         <span class="w-4 text-center">📋</span>
         <span class="flex-1">全部命令</span>
-      </div>
-
-      <!-- Expand/Collapse All -->
-      <div class="px-3 py-1 flex gap-2 text-xs text-secondary">
-        <button class="hover:text-accent" @click="expandAll" title="全部展开">
-          ▼ 全部展开
-        </button>
-        <button class="hover:text-accent" @click="collapseAll" title="全部折叠">
-          ▶ 全部折叠
+        <!-- Expand/Collapse Toggle Button -->
+        <button
+          v-if="categories.some(cat => cat.children && cat.children.length > 0)"
+          class="text-xs text-secondary hover:text-accent px-1"
+          @click.stop="toggleAllExpand"
+          :title="isAllExpanded() ? '全部折叠' : '全部展开'"
+        >
+          {{ isAllExpanded() ? '◀' : '▶' }}
         </button>
       </div>
 
