@@ -12,9 +12,14 @@ const emit = defineEmits(['select', 'add', 'edit', 'refresh'])
 const isCollapsed = ref(false)
 const expandedCategories = ref(new Set()) // 记录展开的分类
 
-// 选择分类
+// 选择分类（点击一级分类自动展开）
 function handleSelect(id) {
   emit('select', id)
+  // 如果点击的是一级分类且有子分类，自动展开
+  const cat = props.categories.find(c => c.id === id)
+  if (cat && cat.children && cat.children.length > 0) {
+    expandedCategories.value.add(id)
+  }
 }
 
 // 新增分类
@@ -72,11 +77,12 @@ function isExpanded(categoryId) {
     <div v-if="!isCollapsed" class="flex-1 overflow-auto">
       <!-- All Commands -->
       <div
-        class="px-3 py-2 cursor-pointer hover:bg-bg-secondary rounded transition-colors"
+        class="px-3 py-2 cursor-pointer hover:bg-bg-secondary rounded transition-colors flex items-center gap-2"
         :class="{ 'bg-bg-secondary font-medium': selectedId === null }"
         @click="handleSelect(null)"
       >
-        全部命令
+        <span class="w-4 text-center">📋</span>
+        <span class="flex-1">全部命令</span>
       </div>
 
       <!-- Category Tree -->
@@ -91,7 +97,7 @@ function isExpanded(categoryId) {
             <!-- 展开/折叠按钮 -->
             <button
               v-if="cat.children && cat.children.length > 0"
-              class="w-4 h-4 flex items-center justify-center text-secondary hover:text-primary"
+              class="w-4 h-4 flex items-center justify-center text-secondary hover:text-primary text-xs"
               @click.stop="toggleExpand(cat.id)"
             >
               <span v-if="isExpanded(cat.id)">▼</span>
@@ -99,6 +105,7 @@ function isExpanded(categoryId) {
             </button>
             <span v-else class="w-4"></span>
 
+            <!-- 一级分类图标：圆形 -->
             <span
               class="w-3 h-3 rounded-full flex-shrink-0"
               :style="{ backgroundColor: cat.color }"
@@ -129,8 +136,10 @@ function isExpanded(categoryId) {
               :class="{ 'bg-bg-secondary font-medium': selectedId === child.id }"
               @click="handleSelect(child.id)"
             >
+              <span class="w-4"></span>
+              <!-- 二级分类图标：菱形 -->
               <span
-                class="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                class="w-2.5 h-2.5 flex-shrink-0 rotate-45"
                 :style="{ backgroundColor: child.color || cat.color }"
               ></span>
               <span class="flex-1 truncate">{{ child.name }}</span>
