@@ -124,16 +124,33 @@ function insertTestData() {
     db.run('INSERT INTO categories (name, color, parent_id) VALUES (?, ?, ?)', [cat.name, cat.color, cat.parentId]);
   });
 
-  // 二级分类
+  // 二级分类（使用父分类颜色的浅色版本）
   const subCategories = [
-    { name: '提交相关', color: '#0F7B6C', parentId: 1 },
-    { name: '分支管理', color: '#0F7B6C', parentId: 1 },
-    { name: '容器操作', color: '#14B8A6', parentId: 3 },
-    { name: '镜像管理', color: '#14B8A6', parentId: 3 }
+    { name: '提交相关', parentId: 1 },
+    { name: '分支管理', parentId: 1 },
+    { name: '容器操作', parentId: 3 },
+    { name: '镜像管理', parentId: 3 }
   ];
 
+  // 颜色浅化函数（增加亮度）
+  function lightenColor(hex) {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    const lighten = (c) => Math.min(255, Math.floor(c + (255 - c) * 0.5));
+    return `#${lighten(r).toString(16).padStart(2, '0')}${lighten(g).toString(16).padStart(2, '0')}${lighten(b).toString(16).padStart(2, '0')}`;
+  }
+
+  // 获取父分类颜色
+  const parentColors = {};
+  categories.forEach((cat, idx) => {
+    parentColors[idx + 1] = cat.color;
+  });
+
   subCategories.forEach(cat => {
-    db.run('INSERT INTO categories (name, color, parent_id) VALUES (?, ?, ?)', [cat.name, cat.color, cat.parentId]);
+    const parentColor = parentColors[cat.parentId] || '#0066CC';
+    const lightColor = lightenColor(parentColor);
+    db.run('INSERT INTO categories (name, color, parent_id) VALUES (?, ?, ?)', [cat.name, lightColor, cat.parentId]);
   });
 
   // 命令（关联到二级分类）
