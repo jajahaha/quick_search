@@ -16,23 +16,42 @@ async function handleImportExcel(event) {
   try {
     const data = await parseExcelFile(file)
     const categories = getCategories()
-    // 使用 trim 处理分类名，避免空格导致匹配失败
-    const categoryMap = new Map(categories.map(c => [c.name.trim(), c.id]))
+
+    console.log('=== Import Debug ===')
+    console.log('Existing categories:', categories)
+    console.log('Excel data rows:', data.length)
+
+    // 使用分类名作为 key，支持大小写不敏感匹配
+    const categoryMap = new Map()
+    categories.forEach(c => {
+      categoryMap.set(c.name.trim().toLowerCase(), c.id)
+      categoryMap.set(c.name.trim(), c.id) // 同时保留原始名称匹配
+    })
+
+    console.log('Category map:', categoryMap)
 
     let importedCount = 0
-    data.forEach(row => {
+    data.forEach((row, index) => {
       const categoryName = row['分类'] ? row['分类'].trim() : ''
       let categoryId = null
 
+      console.log(`Row ${index}: categoryName="${categoryName}"`)
+
       if (categoryName) {
+        // 先尝试精确匹配，再尝试大小写不敏感匹配
         if (categoryMap.has(categoryName)) {
           categoryId = categoryMap.get(categoryName)
+          console.log(`  Matched exact: "${categoryName}" -> ID ${categoryId}`)
+        } else if (categoryMap.has(categoryName.toLowerCase())) {
+          categoryId = categoryMap.get(categoryName.toLowerCase())
+          console.log(`  Matched lowercase: "${categoryName}" -> ID ${categoryId}`)
         } else {
           // 创建新分类
           const newId = addCategory(categoryName)
           categoryMap.set(categoryName, newId)
+          categoryMap.set(categoryName.toLowerCase(), newId)
           categoryId = newId
-          console.log('Created new category:', categoryName, 'ID:', newId)
+          console.log(`  Created new category: "${categoryName}" -> ID ${newId}`)
         }
       }
 
@@ -48,9 +67,10 @@ async function handleImportExcel(event) {
           row['标签'] ? row['标签'].trim() : ''
         )
         importedCount++
-        console.log('Added command:', commandName, 'Category ID:', categoryId)
       }
     })
+
+    console.log('=== Import Complete: ' + importedCount + ' commands ===')
 
     emit('toast', `成功导入 ${importedCount} 条命令`)
     emit('refresh')

@@ -193,9 +193,14 @@ export function addCommand(name, content, categoryId, description, tags) {
     ? maxOrderResult[0].values[0][0] + 1
     : 100;
 
+  // 确保 categoryId 正确处理：明确检查 null/undefined，否则保留原值
+  const finalCategoryId = (categoryId === null || categoryId === undefined) ? null : categoryId;
+
+  console.log('addCommand:', name, 'categoryId:', categoryId, 'finalCategoryId:', finalCategoryId);
+
   db.run(
     `INSERT INTO commands (name, content, category_id, description, tags, sort_order) VALUES (?, ?, ?, ?, ?, ?)`,
-    [name, content, categoryId || null, description || '', tags || '', maxOrder]
+    [name, content, finalCategoryId, description || '', tags || '', maxOrder]
   );
   saveDB();
   return db.exec('SELECT last_insert_rowid()')[0].values[0][0];
