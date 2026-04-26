@@ -1,6 +1,7 @@
 <script setup>
-import { ref } from 'vue'
-import { getCategoryTree, deleteCategory } from '../../utils/database.js'
+import { ref, computed, onMounted } from 'vue'
+import { getCategoryTree, deleteCategory, updateCategoryOrder, isCategoryOrderFrozen, setCategoryOrderFrozen } from '../../utils/database.js'
+import draggable from 'vuedraggable'
 
 const props = defineProps({
   categories: Array,
@@ -11,6 +12,15 @@ const emit = defineEmits(['select', 'add', 'edit', 'refresh'])
 
 const isCollapsed = ref(false)
 const expandedCategories = ref(new Set()) // 记录展开的分类
+const isFrozen = ref(false) // 冻结状态
+
+// 初始化冻结状态
+onMounted(() => {
+  isFrozen.value = isCategoryOrderFrozen()
+})
+
+// 本地分类列表（用于拖拽）
+const localCategories = computed(() => props.categories)
 
 // 选择分类（点击一级分类切换展开/折叠）
 function handleSelect(id) {
@@ -91,6 +101,25 @@ function toggleAllExpand() {
     expandAll()
   }
 }
+
+// 拖拽结束后更新顺序
+function handleDragEnd(event) {
+  if (isFrozen.value) return
+  const newOrder = props.categories.map(cat => cat.id)
+  updateCategoryOrder(newOrder)
+  emit('refresh')
+}
+
+// 切换冻结状态
+function toggleFrozen() {
+  isFrozen.value = !isFrozen.value
+  setCategoryOrderFrozen(isFrozen.value)
+}
+
+// 格式化序号
+function formatIndex(index) {
+  return index.toString().padStart(2, '0')
+}
 </script>
 
 <template>
@@ -117,7 +146,7 @@ function toggleAllExpand() {
     </button>
 
     <div v-if="!isCollapsed" class="flex-1 overflow-auto">
-      <!-- All Commands with Expand/Collapse Toggle -->
+      <!-- All Commands with Expand/Collapse Toggle and Freeze -->
       <div
         class="px-3 py-2 cursor-pointer hover:bg-bg-secondary rounded transition-colors flex items-center gap-2"
         :class="{ 'bg-bg-secondary font-medium': selectedId === null }"
@@ -125,6 +154,14 @@ function toggleAllExpand() {
       >
         <span class="w-4 text-center">📋</span>
         <span class="flex-1">全部命令</span>
+        <!-- Freeze Toggle Button -->
+        <button
+          class="text-xs text-secondary hover:text-accent px-1"
+          @click.stop="toggleFrozen"
+          :title="isFrozen ? '解锁排序' : '锁定排序'"
+        >
+          {{ isFrozen ? '🔒' : '🔓' }}
+        </button>
         <!-- Expand/Collapse Toggle Button -->
         <button
           v-if="categories.some(cat => cat.children && cat.children.length > 0)"
@@ -136,81 +173,101 @@ function toggleAllExpand() {
         </button>
       </div>
 
-      <!-- Category Tree -->
+      <!-- Category Tree with Drag -->
       <div class="mt-1">
-        <div v-for="cat in categories" :key="cat.id">
-          <!-- 一级分类 -->
-          <div
-            class="px-3 py-2 cursor-pointer hover:bg-bg-secondary rounded transition-colors flex items-center gap-2 group"
-            :class="{ 'bg-bg-secondary font-medium': selectedId === cat.id }"
-            @click="handleSelect(cat.id)"
-          >
-            <!-- 展开/折叠按钮 -->
-            <button
-              v-if="cat.children && cat.children.length > 0"
-              class="w-4 h-4 flex items-center justify-center text-secondary hover:text-primary text-xs"
-              @click.stop="toggleExpand(cat.id)"
-            >
-              <span v-if="isExpanded(cat.id)">▼</span>
-              <span v-else>►</span>
-            </button>
-            <span v-else class="w-4"></span>
-
-            <!-- 一级分类图标：圆形 -->
-            <span
-              class="w-3 h-3 rounded-full flex-shrink-0"
-              :style="{ backgroundColor: cat.color }"
-            ></span>
-            <span class="flex-1 truncate">{{ cat.name }}</span>
-            <button
-              class="opacity-0 group-hover:opacity-100 hover:text-accent"
-              @click.stop="handleEdit(cat)"
-              title="编辑"
-            >
-              ✎
-            </button>
-            <button
-              class="opacity-0 group-hover:opacity-100 hover:text-error"
-              @click.stop="handleDelete(cat.id)"
-              title="删除"
-            >
-              ×
-            </button>
-          </div>
-
-          <!-- 二级分类 -->
-          <div v-if="isExpanded(cat.id) && cat.children" class="ml-4">
-            <div
-              v-for="child in cat.children"
-              :key="child.id"
-              class="px-3 py-1.5 cursor-pointer hover:bg-bg-secondary rounded transition-colors flex items-center gap-2 group text-sm"
-              :class="{ 'bg-bg-secondary font-medium': selectedId === child.id }"
-              @click="handleSelect(child.id)"
-            >
-              <span class="w-4"></span>
-              <!-- 二级分类图标：菱形 -->
-              <span
-                class="w-2.5 h-2.5 flex-shrink-0 rotate-45"
-                :style="{ backgroundColor: child.color || cat.color }"
-              ></span>
-              <span class="flex-1 truncate">{{ child.name }}</span>
-              <button
-                class="opacity-0 group-hover:opacity-100 hover:text-accent text-xs"
-                @click.stop="handleEdit(child)"
-                title="编辑"
+        <draggable
+          :list="categories"
+          :disabled="isFrozen"
+          ghost-class="ghost"
+          handle=".drag-handle"
+          @end="handleDragEnd"
+        >
+          <template #item="{ element: cat, index }">
+            <div>
+              <!-- 一级分类 -->
+              <div
+                class="px-3 py-2 cursor-pointer hover:bg-bg-secondary rounded transition-colors flex items-center gap-2 group"
+                :class="{ 'bg-bg-secondary font-medium': selectedId === cat.id }"
+                @click="handleSelect(cat.id)"
               >
-                ✎
-              </button>
-              <button
-                class="opacity-0 group-hover:opacity-100 hover:text-error text-xs"
-                @click.stop="handleDelete(child.id)"
-                title="删除"
-              >
-                ×
-              </button>
+                <!-- 序号 -->
+                <span class="text-xs text-secondary w-4 text-center font-mono">{{ formatIndex(index + 1) }}</span>
+                <!-- 拖拽手柄（仅未冻结时显示） -->
+                <span
+                  v-if="!isFrozen"
+                  class="drag-handle w-4 text-center cursor-move text-secondary hover:text-primary opacity-0 group-hover:opacity-100"
+                >
+                  ⋮⋮
+                </span>
+                <span v-else class="w-4"></span>
+                <!-- 展开/折叠按钮 -->
+                <button
+                  v-if="cat.children && cat.children.length > 0"
+                  class="w-4 h-4 flex items-center justify-center text-secondary hover:text-primary text-xs"
+                  @click.stop="toggleExpand(cat.id)"
+                >
+                  <span v-if="isExpanded(cat.id)">▼</span>
+                  <span v-else>►</span>
+                </button>
+                <span v-else class="w-4"></span>
+
+                <!-- 一级分类图标：圆形 -->
+                <span
+                  class="w-3 h-3 rounded-full flex-shrink-0"
+                  :style="{ backgroundColor: cat.color }"
+                ></span>
+                <span class="flex-1 truncate">{{ cat.name }}</span>
+                <button
+                  class="opacity-0 group-hover:opacity-100 hover:text-accent"
+                  @click.stop="handleEdit(cat)"
+                  title="编辑"
+                >
+                  ✎
+                </button>
+                <button
+                  class="opacity-0 group-hover:opacity-100 hover:text-error"
+                  @click.stop="handleDelete(cat.id)"
+                  title="删除"
+                >
+                  ×
+                </button>
+              </div>
+
+              <!-- 二级分类 -->
+              <div v-if="isExpanded(cat.id) && cat.children" class="ml-4">
+                <div
+                  v-for="child in cat.children"
+                  :key="child.id"
+                  class="px-3 py-1.5 cursor-pointer hover:bg-bg-secondary rounded transition-colors flex items-center gap-2 group text-sm"
+                  :class="{ 'bg-bg-secondary font-medium': selectedId === child.id }"
+                  @click="handleSelect(child.id)"
+                >
+                  <span class="w-4"></span>
+                  <!-- 二级分类图标：菱形 -->
+                  <span
+                    class="w-2.5 h-2.5 flex-shrink-0 rotate-45"
+                    :style="{ backgroundColor: child.color || cat.color }"
+                  ></span>
+                  <span class="flex-1 truncate">{{ child.name }}</span>
+                  <button
+                    class="opacity-0 group-hover:opacity-100 hover:text-accent text-xs"
+                    @click.stop="handleEdit(child)"
+                    title="编辑"
+                  >
+                    ✎
+                  </button>
+                  <button
+                    class="opacity-0 group-hover:opacity-100 hover:text-error text-xs"
+                    @click.stop="handleDelete(child.id)"
+                    title="删除"
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
+          </template>
+        </draggable>
       </div>
     </div>
 
@@ -224,3 +281,10 @@ function toggleAllExpand() {
     </button>
   </aside>
 </template>
+
+<style scoped>
+.ghost {
+  opacity: 0.5;
+  background: #c8ebfb;
+}
+</style>

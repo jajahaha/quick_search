@@ -54,6 +54,7 @@ function createTables() {
       name TEXT NOT NULL,
       color TEXT DEFAULT '#0066CC',
       parent_id INTEGER DEFAULT NULL,
+      sort_order INTEGER DEFAULT 0,
       FOREIGN KEY (parent_id) REFERENCES categories(id)
     )
   `);
@@ -83,6 +84,11 @@ function migrateDatabase() {
       if (!hasParentId) {
         db.run('ALTER TABLE categories ADD COLUMN parent_id INTEGER DEFAULT NULL');
         console.log('Database migrated: added parent_id column to categories');
+      }
+      const hasSortOrder = catColumns[0].values.some(col => col[1] === 'sort_order');
+      if (!hasSortOrder) {
+        db.run('ALTER TABLE categories ADD COLUMN sort_order INTEGER DEFAULT 0');
+        console.log('Database migrated: added sort_order column to categories');
       }
     }
 
@@ -114,13 +120,13 @@ function insertTestData() {
 
   // 一级分类（GaussDB 相关）
   const categories = [
-    { name: 'Git', color: '#0F7B6C' },      // 绿色
-    { name: '集群', color: '#E03E3E' },     // 红色
-    { name: '实时会话', color: '#7C3AED' }  // 紫色
+    { name: 'Git', color: '#0F7B6C', sortOrder: 0 },      // 绿色
+    { name: '集群', color: '#E03E3E', sortOrder: 1 },     // 红色
+    { name: '实时会话', color: '#7C3AED', sortOrder: 2 }  // 紫色
   ];
 
-  categories.forEach(cat => {
-    db.run('INSERT INTO categories (name, color, parent_id) VALUES (?, ?, NULL)', [cat.name, cat.color]);
+  categories.forEach((cat, idx) => {
+    db.run('INSERT INTO categories (name, color, parent_id, sort_order) VALUES (?, ?, NULL, ?)', [cat.name, cat.color, idx]);
   });
 
   // 颜色浅化函数（增加亮度）
@@ -210,13 +216,14 @@ export function getCategories(parentId = null) {
 // 获取所有分类（扁平列表）
 export function getAllCategories() {
   if (!db) return [];
-  const result = db.exec('SELECT id, name, color, parent_id FROM categories ORDER BY id');
+  const result = db.exec('SELECT id, name, color, parent_id, sort_order FROM categories ORDER BY sort_order ASC, id ASC');
   if (!result.length) return [];
   return result[0].values.map(row => ({
     id: row[0],
     name: row[1],
     color: row[2],
-    parentId: row[3]
+    parentId: row[3],
+    sortOrder: row[4] || 0
   }));
 }
 
@@ -226,12 +233,14 @@ export function getCategoryTree() {
   const allCategories = getAllCategories();
   const tree = [];
 
-  // 先构建一级分类
-  allCategories.filter(c => c.parentId === null).forEach(parent => {
+  // 先构建一级分类（已按 sort_order 排序）
+  allCategories.filter(c => c.parentId === null).forEach((parent, index) => {
     const node = {
       id: parent.id,
       name: parent.name,
       color: parent.color,
+      sortOrder: parent.sortOrder,
+      index: index + 1, // 显示序号
       children: []
     };
     // 添加二级分类
@@ -240,7 +249,8 @@ export function getCategoryTree() {
         id: child.id,
         name: child.name,
         color: child.color,
-        parentId: child.parentId
+        parentId: child.parentId,
+        sortOrder: child.sortOrder
       });
     });
     tree.push(node);
@@ -272,6 +282,25 @@ export function addCategory(name, color = '#0066CC', parentId = null) {
 export function updateCategory(id, name, color, parentId = null) {
   db.run('UPDATE categories SET name = ?, color = ?, parent_id = ? WHERE id = ?', [name, color, parentId, id]);
   saveDB();
+}
+
+// 更新分类顺序（一级分类拖拽排序）
+export function updateCategoryOrder(categoryIds) {
+  categoryIds.forEach((id, index) => {
+    db.run('UPDATE categories SET sort_order = ? WHERE id = ?', [index, id]);
+  });
+  saveDB();
+}
+
+// 冻结状态管理
+const CATEGORY_ORDER_FROZEN_KEY = 'gaussdb_category_order_frozen';
+
+export function isCategoryOrderFrozen() {
+  return localStorage.getItem(CATEGORY_ORDER_FROZEN_KEY) === 'true';
+}
+
+export function setCategoryOrderFrozen(frozen) {
+  localStorage.setItem(CATEGORY_ORDER_FROZEN_KEY, frozen ? 'true' : 'false');
 }
 
 // 删除分类
