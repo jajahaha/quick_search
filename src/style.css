@@ -46,16 +46,29 @@
   }
 
   .btn-primary {
-    @apply bg-accent text-white hover:bg-accent/90;
+    @apply bg-accent text-white;
+  }
+
+  .btn-primary:hover {
+    opacity: 0.9;
   }
 
   .btn-secondary {
-    @apply bg-bg-secondary text-primary hover:bg-border;
+    @apply bg-bg-secondary text-primary;
+  }
+
+  .btn-secondary:hover {
+    background-color: var(--color-border);
   }
 
   .input {
-    @apply w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent;
-    transition: border-color 0.3s ease;
+    @apply w-full px-3 py-2 border border-border rounded-md;
+  }
+
+  .input:focus {
+    @apply outline-none ring-1;
+    border-color: var(--color-accent);
+    ring-color: var(--color-accent);
   }
 
   .tag {
