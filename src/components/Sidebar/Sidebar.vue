@@ -186,46 +186,46 @@ function formatIndex(index) {
             <div>
               <!-- 一级分类 -->
               <div
-                class="px-3 py-2 cursor-pointer hover:bg-bg-secondary rounded transition-colors flex items-center gap-2 group"
+                class="px-3 py-2 cursor-pointer hover:bg-bg-secondary rounded transition-colors flex items-center group"
                 :class="{ 'bg-bg-secondary font-medium': selectedId === cat.id }"
                 @click="handleSelect(cat.id)"
               >
-                <!-- 序号 -->
-                <span class="text-xs text-secondary w-4 text-center font-mono">{{ formatIndex(index + 1) }}</span>
+                <!-- 序号 + 一级分类图标（紧凑布局） -->
+                <span class="flex items-center gap-1">
+                  <span class="text-xs text-secondary font-mono">{{ formatIndex(index + 1) }}</span>
+                  <!-- 一级分类图标：圆形 -->
+                  <span
+                    class="w-3 h-3 rounded-full flex-shrink-0"
+                    :style="{ backgroundColor: cat.color }"
+                  ></span>
+                </span>
+                <span class="flex-1 truncate ml-2">{{ cat.name }}</span>
                 <!-- 拖拽手柄（仅未冻结时显示） -->
                 <span
                   v-if="!isFrozen"
-                  class="drag-handle w-4 text-center cursor-move text-secondary hover:text-primary opacity-0 group-hover:opacity-100"
+                  class="drag-handle cursor-move text-secondary hover:text-primary opacity-0 group-hover:opacity-100"
+                  style="font-size: 10px;"
                 >
                   ⋮⋮
                 </span>
-                <span v-else class="w-4"></span>
-                <!-- 展开/折叠按钮 -->
+                <!-- 展开/折叠按钮（有子分类时显示） -->
                 <button
                   v-if="cat.children && cat.children.length > 0"
-                  class="w-4 h-4 flex items-center justify-center text-secondary hover:text-primary text-xs"
+                  class="w-4 h-4 flex items-center justify-center text-secondary hover:text-primary text-xs ml-1"
                   @click.stop="toggleExpand(cat.id)"
                 >
                   <span v-if="isExpanded(cat.id)">▼</span>
                   <span v-else>►</span>
                 </button>
-                <span v-else class="w-4"></span>
-
-                <!-- 一级分类图标：圆形 -->
-                <span
-                  class="w-3 h-3 rounded-full flex-shrink-0"
-                  :style="{ backgroundColor: cat.color }"
-                ></span>
-                <span class="flex-1 truncate">{{ cat.name }}</span>
                 <button
-                  class="opacity-0 group-hover:opacity-100 hover:text-accent"
+                  class="opacity-0 group-hover:opacity-100 hover:text-accent ml-1"
                   @click.stop="handleEdit(cat)"
                   title="编辑"
                 >
                   ✎
                 </button>
                 <button
-                  class="opacity-0 group-hover:opacity-100 hover:text-error"
+                  class="opacity-0 group-hover:opacity-100 hover:text-error ml-1"
                   @click.stop="handleDelete(cat.id)"
                   title="删除"
                 >
@@ -234,21 +234,22 @@ function formatIndex(index) {
               </div>
 
               <!-- 二级分类 -->
-              <div v-if="isExpanded(cat.id) && cat.children" class="ml-4">
+              <div v-if="isExpanded(cat.id) && cat.children">
                 <div
                   v-for="child in cat.children"
                   :key="child.id"
-                  class="px-3 py-1.5 cursor-pointer hover:bg-bg-secondary rounded transition-colors flex items-center gap-2 group text-sm"
+                  class="px-3 py-1.5 cursor-pointer hover:bg-bg-secondary rounded transition-colors flex items-center group text-sm"
                   :class="{ 'bg-bg-secondary font-medium': selectedId === child.id }"
                   @click="handleSelect(child.id)"
                 >
-                  <span class="w-4"></span>
+                  <!-- 左边留空对齐一级图标位置 -->
+                  <span class="w-10"></span>
                   <!-- 二级分类图标：菱形 -->
                   <span
                     class="w-2.5 h-2.5 flex-shrink-0 rotate-45"
                     :style="{ backgroundColor: child.color || cat.color }"
                   ></span>
-                  <span class="flex-1 truncate">{{ child.name }}</span>
+                  <span class="flex-1 truncate ml-2">{{ child.name }}</span>
                   <button
                     class="opacity-0 group-hover:opacity-100 hover:text-accent text-xs"
                     @click.stop="handleEdit(child)"
