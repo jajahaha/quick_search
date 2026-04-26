@@ -76,6 +76,23 @@ const filteredCommands = computed(() => {
   }
 })
 
+// 分类编号映射（用于显示在命令卡片上）
+const categoryIndexMap = computed(() => {
+  const map = {}
+  categories.value.forEach((cat, idx) => {
+    // 一级分类编号
+    const parentNum = (idx + 1).toString().padStart(2, '0')
+    map[cat.id] = parentNum
+    // 二级分类编号
+    if (cat.children) {
+      cat.children.forEach((child, childIdx) => {
+        map[child.id] = parentNum + '-' + (childIdx + 1).toString().padStart(2, '0')
+      })
+    }
+  })
+  return map
+})
+
 // 加载数据
 async function loadData() {
   try {
@@ -332,6 +349,7 @@ function refreshData() {
             :key="cmd.id"
             :command="cmd"
             :archMode="archMode"
+            :categoryIndexMap="categoryIndexMap"
             @edit="openEditCommand"
             @delete="handleDeleteCommand"
             @copy="handleCopyCommand"

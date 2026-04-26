@@ -4,7 +4,8 @@ import { getCommandContentByArch, hasArchContent, getCommandDisplayContent } fro
 
 const props = defineProps({
   command: Object,
-  archMode: String
+  archMode: String,
+  categoryIndexMap: Object
 })
 
 const emit = defineEmits(['edit', 'delete', 'copy'])
@@ -113,7 +114,7 @@ function toggleCopyMenu() {
         class="px-1.5 py-0.5 text-xs rounded-full text-white shadow-sm"
         :style="{ backgroundColor: command.categoryColor }"
       >
-        {{ command.categoryName }}
+        {{ categoryIndexMap[command.categoryId] || '' }} {{ command.categoryName }}
       </span>
       <h3 class="font-medium flex-1 truncate text-sm">{{ command.name }}</h3>
       <!-- Copy Button with Dropdown -->

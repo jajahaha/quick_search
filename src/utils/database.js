@@ -395,7 +395,9 @@ export function getCommands(categoryId = null, archMode = 'both') {
     SELECT c.id, c.name, c.content, c.centralized_content, c.distributed_content,
            c.description, c.tags, c.sort_order, c.category_id,
            cat.name as category_name, cat.color as category_color, cat.parent_id as category_parent_id,
-           parent.name as parent_category_name, parent.color as parent_category_color
+           cat.sort_order as cat_sort_order,
+           parent.name as parent_category_name, parent.color as parent_category_color,
+           parent.sort_order as parent_sort_order
     FROM commands c
     LEFT JOIN categories cat ON c.category_id = cat.id
     LEFT JOIN categories parent ON cat.parent_id = parent.id
@@ -427,7 +429,8 @@ export function getCommands(categoryId = null, archMode = 'both') {
   }
   // archMode === 'both' 时显示所有命令
 
-  sql += ' ORDER BY c.sort_order DESC, c.id DESC';
+  // 按一级分类排序 -> 二级分类排序 -> 命令排序
+  sql += ' ORDER BY parent_sort_order ASC, cat_sort_order ASC, c.sort_order DESC, c.id DESC';
 
   const result = db.exec(sql, params);
   if (!result.length) return [];
@@ -444,8 +447,10 @@ export function getCommands(categoryId = null, archMode = 'both') {
     categoryName: row[9] || '',
     categoryColor: row[10] || '#0066CC',
     categoryParentId: row[11],
-    parentCategoryName: row[12] || '',
-    parentCategoryColor: row[13] || '#0066CC'
+    catSortOrder: row[12] || 0,
+    parentCategoryName: row[13] || '',
+    parentCategoryColor: row[14] || '#0066CC',
+    parentSortOrder: row[15] || 0
   }));
 }
 
@@ -550,7 +555,9 @@ export function searchCommands(keyword, archMode = 'both') {
     SELECT c.id, c.name, c.content, c.centralized_content, c.distributed_content,
            c.description, c.tags, c.sort_order, c.category_id,
            cat.name as category_name, cat.color as category_color, cat.parent_id as category_parent_id,
-           parent.name as parent_category_name, parent.color as parent_category_color
+           cat.sort_order as cat_sort_order,
+           parent.name as parent_category_name, parent.color as parent_category_color,
+           parent.sort_order as parent_sort_order
     FROM commands c
     LEFT JOIN categories cat ON c.category_id = cat.id
     LEFT JOIN categories parent ON cat.parent_id = parent.id
@@ -565,7 +572,8 @@ export function searchCommands(keyword, archMode = 'both') {
     sql += ' AND (c.distributed_content IS NOT NULL AND c.distributed_content != "" OR c.content IS NOT NULL AND c.content != "") ';
   }
 
-  sql += ' ORDER BY c.sort_order DESC';
+  // 按一级分类排序 -> 二级分类排序 -> 命令排序
+  sql += ' ORDER BY parent_sort_order ASC, cat_sort_order ASC, c.sort_order DESC, c.id DESC';
 
   const result = db.exec(sql, params);
   if (!result.length) return [];
@@ -582,8 +590,10 @@ export function searchCommands(keyword, archMode = 'both') {
     categoryName: row[9] || '',
     categoryColor: row[10] || '#0066CC',
     categoryParentId: row[11],
-    parentCategoryName: row[12] || '',
-    parentCategoryColor: row[13] || '#0066CC'
+    catSortOrder: row[12] || 0,
+    parentCategoryName: row[13] || '',
+    parentCategoryColor: row[14] || '#0066CC',
+    parentSortOrder: row[15] || 0
   }));
 }
 
