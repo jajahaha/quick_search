@@ -28,17 +28,45 @@
   --color-border: #3F3F46;
 }
 
-@layer base {
-  body {
-    @apply bg-background text-primary antialiased;
-    transition: background-color 0.3s ease, color 0.3s ease;
-  }
+/* 直接设置 body 和页面元素的背景色 */
+body {
+  background-color: var(--color-bg-secondary);
+  color: var(--color-primary);
+}
+
+/* 强制覆盖所有背景 */
+.bg-background {
+  background-color: var(--color-background) !important;
+}
+
+.bg-bg-secondary {
+  background-color: var(--color-bg-secondary) !important;
+}
+
+.border-border {
+  border-color: var(--color-border) !important;
+}
+
+.text-primary {
+  color: var(--color-primary) !important;
+}
+
+.text-secondary {
+  color: var(--color-secondary) !important;
+}
+
+.text-accent {
+  color: var(--color-accent) !important;
+}
+
+.bg-accent {
+  background-color: var(--color-accent) !important;
 }
 
 @layer components {
   .card {
-    @apply bg-background border border-border rounded-lg shadow-sm;
-    transition: background-color 0.3s ease, border-color 0.3s ease;
+    background-color: var(--color-background);
+    border-color: var(--color-border);
   }
 
   .btn {
@@ -46,7 +74,8 @@
   }
 
   .btn-primary {
-    @apply bg-accent text-white;
+    background-color: var(--color-accent);
+    color: white;
   }
 
   .btn-primary:hover {
@@ -54,7 +83,8 @@
   }
 
   .btn-secondary {
-    @apply bg-bg-secondary text-primary;
+    background-color: var(--color-bg-secondary);
+    color: var(--color-primary);
   }
 
   .btn-secondary:hover {
@@ -62,16 +92,19 @@
   }
 
   .input {
-    @apply w-full px-3 py-2 border border-border rounded-md;
+    @apply w-full px-3 py-2 rounded-md;
+    background-color: var(--color-background);
+    border: 1px solid var(--color-border);
   }
 
   .input:focus {
     @apply outline-none ring-1;
     border-color: var(--color-accent);
-    ring-color: var(--color-accent);
   }
 
   .tag {
-    @apply px-2 py-0.5 text-xs rounded-full bg-bg-secondary text-secondary;
+    @apply px-2 py-0.5 text-xs rounded-full;
+    background-color: var(--color-bg-secondary);
+    color: var(--color-secondary);
   }
 }
