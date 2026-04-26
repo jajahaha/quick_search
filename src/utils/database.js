@@ -418,5 +418,6 @@ export function importDatabaseFile(file) {
 export function clearAllData() {
   db.run('DELETE FROM commands');
   db.run('DELETE FROM categories');
-  saveDB();
+  // 删除 localStorage 缓存，让下次刷新重新生成测试数据
+  localStorage.removeItem(DB_KEY);
 }
