@@ -66,16 +66,25 @@ function isExpanded(categoryId) {
 
 <template>
   <aside
-    class="w-60 border-r border-border bg-background flex flex-col transition-all duration-200"
-    :class="{ 'w-12': isCollapsed }"
+    class="border-r border-border bg-background flex flex-col transition-all duration-300"
+    :class="isCollapsed ? 'w-12' : 'w-60'"
   >
     <!-- Toggle Button -->
     <button
-      class="p-2 hover:bg-bg-secondary rounded"
+      class="p-2 hover:bg-bg-secondary rounded flex items-center justify-center transition-colors"
+      :class="isCollapsed ? 'w-12 h-12' : ''"
       @click="toggleCollapse"
+      :title="isCollapsed ? '展开侧边栏' : '收起侧边栏'"
     >
-      <span v-if="isCollapsed">»</span>
-      <span v-else>«</span>
+      <svg
+        class="w-5 h-5 text-secondary"
+        :class="{ 'rotate-180': isCollapsed }"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+      </svg>
     </button>
 
     <div v-if="!isCollapsed" class="flex-1 overflow-auto">
