@@ -536,6 +536,9 @@ export function restoreDefaultData() {
   // 删除数据库中的所有数据
   db.run('DELETE FROM commands');
   db.run('DELETE FROM categories');
+  // 重置自增 ID
+  db.run('DELETE FROM sqlite_sequence WHERE name="commands"');
+  db.run('DELETE FROM sqlite_sequence WHERE name="categories"');
   // 重新生成测试数据
   insertTestData();
   saveDB();
