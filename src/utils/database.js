@@ -139,8 +139,11 @@ export function getCategories() {
 
 export function addCategory(name, color = '#0066CC') {
   db.run('INSERT INTO categories (name, color) VALUES (?, ?)', [name, color]);
+  // 在 saveDB 之前获取 last_insert_rowid，避免被影响
+  const newId = db.exec('SELECT last_insert_rowid()')[0].values[0][0];
+  console.log('addCategory:', name, 'newId:', newId);
   saveDB();
-  return db.exec('SELECT last_insert_rowid()')[0].values[0][0];
+  return newId;
 }
 
 export function updateCategory(id, name, color) {
@@ -198,7 +201,7 @@ export function addCommand(name, content, categoryId, description, tags) {
     : 100;
 
   // 确保 categoryId 正确处理：明确检查 null/undefined，否则保留原值
-  const finalCategoryId = (categoryId === null || categoryId === undefined) ? null : categoryId;
+  const finalCategoryId = (categoryId === null || categoryId === undefined || categoryId === 0) ? null : categoryId;
 
   console.log('addCommand:', name, 'categoryId:', categoryId, 'finalCategoryId:', finalCategoryId);
 
@@ -206,8 +209,10 @@ export function addCommand(name, content, categoryId, description, tags) {
     `INSERT INTO commands (name, content, category_id, description, tags, sort_order) VALUES (?, ?, ?, ?, ?, ?)`,
     [name, content, finalCategoryId, description || '', tags || '', maxOrder]
   );
+  // 在 saveDB 之前获取 last_insert_rowid
+  const newId = db.exec('SELECT last_insert_rowid()')[0].values[0][0];
   saveDB();
-  return db.exec('SELECT last_insert_rowid()')[0].values[0][0];
+  return newId;
 }
 
 export function updateCommand(id, name, content, categoryId, description, tags) {
