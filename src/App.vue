@@ -7,7 +7,7 @@ import CommandModal from './components/Modal/CommandModal.vue'
 import CategoryModal from './components/Modal/CategoryModal.vue'
 import ImportModal from './components/Modal/ImportModal.vue'
 import Toast from './components/common/Toast.vue'
-import { initDB, getCommands, getCategoryTree, getAllCategories, searchCommands, addCommand, updateCommand, deleteCommand, updateCommandOrder, getCommandContentByArch } from './utils/database.js'
+import { initDB, getCommands, getCategoryTree, getAllCategories, searchCommands, addCommand, updateCommand, deleteCommand, updateCommandOrder, getCommandContentByArch, getCategoryWithChildrenIds } from './utils/database.js'
 import { copyToClipboard } from './utils/clipboard.js'
 
 // 皮肤主题配置
@@ -59,10 +59,17 @@ const toastType = ref('success')
 const filteredCommands = computed(() => {
   if (initError.value) return []
   try {
+    let result = commands.value
+    // 搜索过滤
     if (searchKeyword.value.trim()) {
-      return searchCommands(searchKeyword.value, archMode.value)
+      result = searchCommands(searchKeyword.value, archMode.value)
     }
-    return getCommands(selectedCategoryId.value, archMode.value)
+    // 分类过滤
+    if (selectedCategoryId.value) {
+      const categoryIds = getCategoryWithChildrenIds(selectedCategoryId.value)
+      result = result.filter(cmd => categoryIds.includes(cmd.categoryId))
+    }
+    return result
   } catch (e) {
     return []
   }
@@ -72,7 +79,7 @@ const filteredCommands = computed(() => {
 async function loadData() {
   try {
     categories.value = getCategoryTree() // 树形分类用于侧边栏
-    commands.value = getCommands(null, archMode.value)
+    commands.value = getCommands(null, archMode.value) // 加载所有命令
   } catch (e) {
     console.error('Load data failed:', e)
   }
