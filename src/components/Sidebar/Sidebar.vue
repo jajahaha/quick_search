@@ -141,18 +141,18 @@ const totalCommandCount = computed(() => {
 
 <template>
   <aside
-    class="border-r border-border bg-background flex flex-col transition-all duration-300"
-    :class="isCollapsed ? 'w-12' : 'w-60'"
+    class="border-r border-border bg-background flex flex-col transition-all duration-300 shadow-sm"
+    :class="isCollapsed ? 'w-10' : 'w-56'"
   >
     <!-- Toggle Button -->
     <button
-      class="p-2 hover:bg-bg-secondary rounded flex items-center justify-center transition-colors"
-      :class="isCollapsed ? 'w-12 h-12' : ''"
+      class="p-1.5 hover:bg-bg-secondary flex items-center justify-center transition-colors border-b border-border"
+      :class="isCollapsed ? 'w-10 h-10' : 'h-9'"
       @click="toggleCollapse"
       :title="isCollapsed ? '展开侧边栏' : '收起侧边栏'"
     >
       <svg
-        class="w-5 h-5 text-secondary"
+        class="w-4 h-4 text-secondary transition-transform"
         :class="{ 'rotate-180': isCollapsed }"
         fill="none"
         stroke="currentColor"

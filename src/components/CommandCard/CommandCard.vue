@@ -104,13 +104,13 @@ function toggleCopyMenu() {
 </script>
 
 <template>
-  <div class="card p-2 hover:shadow-md transition-shadow group relative">
+  <div class="card p-2.5 hover:shadow-lg hover:border-accent/30 transition-all group relative">
     <!-- Header -->
-    <div class="flex items-center gap-1 mb-1">
+    <div class="flex items-center gap-1.5 mb-1.5">
       <span class="text-sm">{{ archIcon }}</span>
       <span
         v-if="command.categoryName"
-        class="px-1 py-0.5 text-xs rounded text-white"
+        class="px-1.5 py-0.5 text-xs rounded-full text-white shadow-sm"
         :style="{ backgroundColor: command.categoryColor }"
       >
         {{ command.categoryName }}
@@ -119,7 +119,7 @@ function toggleCopyMenu() {
       <!-- Copy Button with Dropdown -->
       <div class="relative">
         <button
-          class="btn btn-primary opacity-0 group-hover:opacity-100 text-xs px-2 py-0.5"
+          class="btn btn-primary opacity-0 group-hover:opacity-100 text-xs px-2 py-1"
           @click="toggleCopyMenu"
         >
           复制
@@ -127,11 +127,11 @@ function toggleCopyMenu() {
         <!-- Copy Menu Dropdown -->
         <div
           v-if="showCopyMenu"
-          class="absolute right-0 top-full mt-1 bg-background border border-border rounded shadow-lg z-10 min-w-[120px]"
+          class="absolute right-0 top-full mt-1 bg-background border border-border rounded-lg shadow-xl z-10 min-w-[120px] overflow-hidden"
         >
           <button
             v-if="archStatus.hasCentralized"
-            class="w-full px-2 py-1 text-left text-sm hover:bg-bg-secondary flex items-center gap-1"
+            class="w-full px-3 py-2 text-left text-sm hover:bg-bg-secondary flex items-center gap-2 transition-colors"
             @click="handleCopy(command.centralizedContent)"
           >
             <span class="text-blue-500">🔵</span>
@@ -139,7 +139,7 @@ function toggleCopyMenu() {
           </button>
           <button
             v-if="archStatus.hasDistributed"
-            class="w-full px-2 py-1 text-left text-sm hover:bg-bg-secondary flex items-center gap-1"
+            class="w-full px-3 py-2 text-left text-sm hover:bg-bg-secondary flex items-center gap-2 transition-colors"
             @click="handleCopy(command.distributedContent)"
           >
             <span class="text-green-500">🟢</span>

@@ -68,11 +68,14 @@ body {
 @layer components {
   .card {
     background-color: var(--color-background);
-    border-color: var(--color-border);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    transition: all 0.2s ease;
   }
 
   .btn {
-    @apply px-3 py-1.5 rounded-md text-sm font-medium transition-colors;
+    @apply px-2.5 py-1 rounded-md text-sm font-medium transition-all;
+    border-radius: 6px;
   }
 
   .btn-primary {
@@ -81,12 +84,13 @@ body {
   }
 
   .btn-primary:hover {
-    opacity: 0.9;
+    filter: brightness(1.1);
   }
 
   .btn-secondary {
     background-color: var(--color-bg-secondary);
     color: var(--color-primary);
+    border: 1px solid var(--color-border);
   }
 
   .btn-secondary:hover {
@@ -94,19 +98,17 @@ body {
   }
 
   .input {
-    @apply w-full px-3 py-2 rounded-md;
-    background-color: var(--color-background);
+    @apply w-full px-3 py-1.5 rounded-md text-sm;
+    background-color: var(--color-bg-secondary);
     border: 1px solid var(--color-border);
+    border-radius: 6px;
+    transition: all 0.2s ease;
   }
 
   .input:focus {
-    @apply outline-none ring-1;
+    @apply outline-none ring-2;
     border-color: var(--color-accent);
-  }
-
-  .tag {
-    @apply px-2 py-0.5 text-xs rounded-full;
-    background-color: var(--color-bg-secondary);
-    color: var(--color-secondary);
+    ring-color: var(--color-accent);
+    background-color: var(--color-background);
   }
 }

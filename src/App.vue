@@ -230,42 +230,38 @@ function refreshData() {
 </script>
 
 <template>
-  <div class="min-h-screen flex flex-col">
-    <!-- Title Bar -->
-    <div
-      class="relative text-white px-6 py-5 overflow-hidden"
-      style="background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.85)), url('https://images.unsplash.com/photo-1557683316-973df3baf1c3?w=1200&q=80') center/cover no-repeat;"
-    >
-      <div class="absolute inset-0 bg-gradient-to-r from-slate-900/50 to-transparent"></div>
-      <div class="relative flex items-center justify-center gap-3">
-        <span class="text-3xl">⚡</span>
-        <h1 class="text-2xl font-bold tracking-wide">GaussDB快捷命令管理器</h1>
+  <div class="min-h-screen flex flex-col bg-bg-secondary">
+    <!-- Title Bar - 简洁设计 -->
+    <div class="bg-gradient-to-r from-slate-800 to-slate-700 text-white px-6 py-3">
+      <div class="flex items-center justify-center gap-2">
+        <span class="text-2xl">⚡</span>
+        <h1 class="text-xl font-semibold tracking-wide">GaussDB 快捷命令管理器</h1>
       </div>
     </div>
 
     <!-- Header / Toolbar -->
-    <header class="h-12 border-b border-border flex items-center px-4 gap-4 bg-background sticky top-0 z-10">
-      <!-- Architecture Switch -->
-      <div class="flex gap-1 flex-shrink-0 bg-bg-secondary rounded p-1">
+    <header class="h-11 border-b border-border flex items-center px-4 gap-3 bg-background sticky top-0 z-10 shadow-sm">
+      <!-- Architecture Switch - 紧凑按钮组 -->
+      <div class="flex gap-0.5 flex-shrink-0 bg-bg-secondary rounded-lg p-0.5">
         <button
-          class="px-3 py-1 rounded text-sm font-medium transition-colors"
-          :class="archMode === 'centralized' ? 'bg-blue-600 text-white' : 'text-secondary hover:text-primary'"
+          class="px-2.5 py-1 rounded text-sm font-medium transition-all"
+          :class="archMode === 'centralized' ? 'bg-blue-500 text-white shadow-sm' : 'text-secondary hover:text-primary hover:bg-background'"
           @click="switchArchMode('centralized')"
           title="集中式架构"
         >
           🔵 集中式
         </button>
         <button
-          class="px-3 py-1 rounded text-sm font-medium transition-colors"
-          :class="archMode === 'distributed' ? 'bg-green-600 text-white' : 'text-secondary hover:text-primary'"
+          class="px-2.5 py-1 rounded text-sm font-medium transition-all"
+          :class="archMode === 'distributed' ? 'bg-green-500 text-white shadow-sm' : 'text-secondary hover:text-primary hover:bg-background'"
           @click="switchArchMode('distributed')"
           title="分布式架构"
         >
           🟢 分布式
         </button>
         <button
-          class="px-3 py-1 rounded text-sm font-medium transition-colors"
-          :class="archMode === 'both' ? 'bg-gray-600 text-white' : 'text-secondary hover:text-primary'"
+          class="px-2.5 py-1 rounded text-sm font-medium transition-all"
+          :class="archMode === 'both' ? 'bg-gray-500 text-white shadow-sm' : 'text-secondary hover:text-primary hover:bg-background'"
           @click="switchArchMode('both')"
           title="显示全部"
         >
@@ -276,23 +272,23 @@ function refreshData() {
       <SearchBar
         :keyword="searchKeyword"
         @search="handleSearch"
-        class="flex-1"
+        class="flex-1 max-w-xl"
       />
 
       <!-- Right side buttons -->
-      <div class="flex gap-2 flex-shrink-0 items-center ml-auto">
+      <div class="flex gap-1.5 flex-shrink-0 items-center ml-auto">
         <!-- Theme Switcher -->
         <button
-          class="btn btn-secondary flex items-center gap-1"
+          class="btn btn-secondary px-2 py-1 text-sm"
           @click="toggleTheme"
           title="切换皮肤"
         >
-          <span>{{ currentTheme === 'default' ? '👔' : '🧥' }}</span>
+          {{ currentTheme === 'default' ? '👔' : '🧥' }}
         </button>
-        <button class="btn btn-secondary" @click="openImportModal">
-          导入/导出
+        <button class="btn btn-secondary px-2 py-1 text-sm" @click="openImportModal">
+          📦
         </button>
-        <button class="btn btn-primary" @click="openAddCommand">
+        <button class="btn btn-primary px-3 py-1 text-sm" @click="openAddCommand">
           + 新增
         </button>
       </div>
@@ -312,7 +308,7 @@ function refreshData() {
       />
 
       <!-- Command List -->
-      <main class="flex-1 overflow-auto p-4 bg-bg-secondary">
+      <main class="flex-1 overflow-auto p-3">
         <div v-if="isLoading" class="flex items-center justify-center h-full">
           <span class="text-secondary">加载中...</span>
         </div>
@@ -324,11 +320,13 @@ function refreshData() {
           </button>
         </div>
 
-        <div v-else-if="filteredCommands.length === 0" class="flex items-center justify-center h-full">
-          <span class="text-secondary">暂无命令，点击"新增"添加</span>
+        <div v-else-if="filteredCommands.length === 0" class="flex flex-col items-center justify-center h-full gap-2">
+          <span class="text-4xl">📭</span>
+          <span class="text-secondary">暂无命令</span>
+          <button class="btn btn-primary" @click="openAddCommand">添加第一条命令</button>
         </div>
 
-        <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
+        <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2">
           <CommandCard
             v-for="cmd in filteredCommands"
             :key="cmd.id"

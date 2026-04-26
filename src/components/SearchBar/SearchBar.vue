@@ -24,16 +24,17 @@ function handleKeydown(e) {
 
 <template>
   <div class="relative">
+    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-secondary">🔍</span>
     <input
       v-model="inputKeyword"
       type="text"
-      placeholder="搜索命令... (按 / 快捷聚焦)"
-      class="input"
+      placeholder="搜索命令..."
+      class="input pl-9"
       @keydown="handleKeydown"
     />
     <span
       v-if="inputKeyword"
-      class="absolute right-3 top-1/2 -translate-y-1/2 text-secondary cursor-pointer hover:text-primary"
+      class="absolute right-2 top-1/2 -translate-y-1/2 text-secondary cursor-pointer hover:text-primary px-1"
       @click="inputKeyword = ''"
     >
       ×
