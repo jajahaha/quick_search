@@ -104,22 +104,22 @@ function toggleCopyMenu() {
 </script>
 
 <template>
-  <div class="card p-4 hover:shadow-md transition-shadow group relative">
+  <div class="card p-3 hover:shadow-md transition-shadow group relative">
     <!-- Header -->
-    <div class="flex items-center gap-2 mb-2">
+    <div class="flex items-center gap-1.5 mb-1.5">
       <span class="text-sm">{{ archIcon }}</span>
       <span
         v-if="command.categoryName"
-        class="px-2 py-0.5 text-xs rounded text-white"
+        class="px-1.5 py-0.5 text-xs rounded text-white"
         :style="{ backgroundColor: command.categoryColor }"
       >
         {{ command.categoryName }}
       </span>
-      <h3 class="font-medium flex-1 truncate">{{ command.name }}</h3>
+      <h3 class="font-medium flex-1 truncate text-sm">{{ command.name }}</h3>
       <!-- Copy Button with Dropdown -->
       <div class="relative">
         <button
-          class="btn btn-primary opacity-0 group-hover:opacity-100"
+          class="btn btn-primary opacity-0 group-hover:opacity-100 text-xs px-2 py-1"
           @click="toggleCopyMenu"
         >
           复制
@@ -127,11 +127,11 @@ function toggleCopyMenu() {
         <!-- Copy Menu Dropdown -->
         <div
           v-if="showCopyMenu"
-          class="absolute right-0 top-full mt-1 bg-background border border-border rounded shadow-lg z-10 min-w-[140px]"
+          class="absolute right-0 top-full mt-1 bg-background border border-border rounded shadow-lg z-10 min-w-[120px]"
         >
           <button
             v-if="archStatus.hasCentralized"
-            class="w-full px-3 py-2 text-left text-sm hover:bg-bg-secondary flex items-center gap-2"
+            class="w-full px-2 py-1.5 text-left text-sm hover:bg-bg-secondary flex items-center gap-1"
             @click="handleCopy(command.centralizedContent)"
           >
             <span class="text-blue-500">🔵</span>
@@ -139,7 +139,7 @@ function toggleCopyMenu() {
           </button>
           <button
             v-if="archStatus.hasDistributed"
-            class="w-full px-3 py-2 text-left text-sm hover:bg-bg-secondary flex items-center gap-2"
+            class="w-full px-2 py-1.5 text-left text-sm hover:bg-bg-secondary flex items-center gap-1"
             @click="handleCopy(command.distributedContent)"
           >
             <span class="text-green-500">🟢</span>
@@ -147,7 +147,7 @@ function toggleCopyMenu() {
           </button>
           <button
             v-if="archStatus.hasCommon"
-            class="w-full px-3 py-2 text-left text-sm hover:bg-bg-secondary flex items-center gap-2"
+            class="w-full px-2 py-1.5 text-left text-sm hover:bg-bg-secondary flex items-center gap-1"
             @click="handleCopy(command.content)"
           >
             <span class="text-gray-400">⚪</span>
@@ -160,11 +160,11 @@ function toggleCopyMenu() {
     <!-- 单一架构模式：显示单个内容 -->
     <div
       v-if="!isBothMode && displayContent"
-      class="bg-bg-secondary p-2 rounded font-mono text-sm break-all cursor-pointer hover:bg-border transition-colors"
+      class="bg-bg-secondary p-1.5 rounded font-mono text-sm break-all cursor-pointer hover:bg-border transition-colors"
       @click="handleCopyCurrent"
       title="点击复制"
     >
-      <div class="flex items-center gap-1 mb-1">
+      <div class="flex items-center gap-1 mb-0.5">
         <span :class="currentContentType === 'centralized' ? 'text-blue-500' : currentContentType === 'distributed' ? 'text-green-500' : 'text-gray-400'">
           {{ currentContentType === 'centralized' ? '🔵' : currentContentType === 'distributed' ? '🟢' : '⚪' }}
         </span>
@@ -174,15 +174,15 @@ function toggleCopyMenu() {
     </div>
 
     <!-- 全部模式：显示所有架构内容 -->
-    <div v-if="isBothMode && contentList && contentList.length > 0" class="space-y-2">
+    <div v-if="isBothMode && contentList && contentList.length > 0" class="space-y-1.5">
       <div
         v-for="item in contentList"
         :key="item.type"
-        class="bg-bg-secondary p-2 rounded font-mono text-sm break-all cursor-pointer hover:bg-border transition-colors"
+        class="bg-bg-secondary p-1.5 rounded font-mono text-sm break-all cursor-pointer hover:bg-border transition-colors"
         @click="handleCopy(item.content)"
         title="点击复制"
       >
-        <div class="flex items-center gap-1 mb-1">
+        <div class="flex items-center gap-1 mb-0.5">
           <span :class="item.type === 'centralized' ? 'text-blue-500' : item.type === 'distributed' ? 'text-green-500' : 'text-gray-400'">
             {{ item.type === 'centralized' ? '🔵' : item.type === 'distributed' ? '🟢' : '⚪' }}
           </span>
@@ -193,23 +193,23 @@ function toggleCopyMenu() {
     </div>
 
     <!-- Description -->
-    <p v-if="command.description" class="mt-2 text-secondary text-sm">
+    <p v-if="command.description" class="mt-1.5 text-secondary text-xs">
       {{ command.description }}
     </p>
 
     <!-- Tags -->
-    <div v-if="tagsList.length" class="mt-2 flex gap-1 flex-wrap">
-      <span v-for="tag in tagsList" :key="tag" class="tag">
+    <div v-if="tagsList.length" class="mt-1.5 flex gap-1 flex-wrap">
+      <span v-for="tag in tagsList" :key="tag" class="tag text-xs">
         {{ tag }}
       </span>
     </div>
 
     <!-- Actions -->
-    <div class="mt-3 flex gap-2 opacity-0 group-hover:opacity-100">
-      <button class="text-secondary hover:text-accent text-sm" @click="handleEdit">
+    <div class="mt-2 flex gap-2 opacity-0 group-hover:opacity-100">
+      <button class="text-secondary hover:text-accent text-xs" @click="handleEdit">
         编辑
       </button>
-      <button class="text-secondary hover:text-error text-sm" @click="handleDelete">
+      <button class="text-secondary hover:text-error text-xs" @click="handleDelete">
         删除
       </button>
     </div>
