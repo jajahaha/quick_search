@@ -185,9 +185,16 @@ function refreshData() {
 
 <template>
   <div class="min-h-screen flex flex-col">
-    <!-- Header -->
-    <header class="h-14 border-b border-border flex items-center px-4 gap-4 bg-background sticky top-0 z-10">
-      <h1 class="text-lg font-semibold flex-shrink-0">快捷命令</h1>
+    <!-- Title Bar -->
+    <div class="bg-gradient-to-r from-slate-800 to-slate-700 text-white px-6 py-4">
+      <div class="flex items-center gap-3">
+        <span class="text-2xl">⚡</span>
+        <h1 class="text-xl font-bold tracking-wide">快捷命令管理器</h1>
+      </div>
+    </div>
+
+    <!-- Header / Toolbar -->
+    <header class="h-12 border-b border-border flex items-center px-4 gap-4 bg-background sticky top-0 z-10">
       <SearchBar
         :keyword="searchKeyword"
         @search="handleSearch"
