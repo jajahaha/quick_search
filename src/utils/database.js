@@ -296,6 +296,14 @@ export function updateCategoryOrder(categoryIds) {
   saveDB();
 }
 
+// 更新二级分类顺序（parentId 下的子分类排序）
+export function updateSubCategoryOrder(parentId, childIds) {
+  childIds.forEach((id, index) => {
+    db.run('UPDATE categories SET sort_order = ? WHERE id = ? AND parent_id = ?', [index, id, parentId]);
+  });
+  saveDB();
+}
+
 // 冻结状态管理
 const CATEGORY_ORDER_FROZEN_KEY = 'gaussdb_category_order_frozen';
 

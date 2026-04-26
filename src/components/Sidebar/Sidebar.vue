@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
-import { getCategoryTree, deleteCategory, updateCategoryOrder, isCategoryOrderFrozen, setCategoryOrderFrozen, getCategoryCommandCounts } from '../../utils/database.js'
+import { getCategoryTree, deleteCategory, updateCategoryOrder, updateSubCategoryOrder, isCategoryOrderFrozen, setCategoryOrderFrozen, getCategoryCommandCounts } from '../../utils/database.js'
 import draggable from 'vuedraggable'
 
 const props = defineProps({
@@ -127,6 +127,22 @@ function toggleFrozen() {
 // 格式化序号
 function formatIndex(index) {
   return index.toString().padStart(2, '0')
+}
+
+// 格式化二级分类序号（仅子序号）
+function formatSubIndex(childIndex) {
+  return formatIndex(childIndex + 1)
+}
+
+// 二级分类拖拽结束后更新顺序
+function handleSubDragEnd(parentId, parentIndex, event) {
+  if (isFrozen.value) return
+  const parent = props.categories[parentIndex]
+  if (parent && parent.children) {
+    const newOrder = parent.children.map(child => child.id)
+    updateSubCategoryOrder(parentId, newOrder)
+    emit('refresh')
+  }
 }
 
 // 计算总命令数量
@@ -256,42 +272,60 @@ const totalCommandCount = computed(() => {
                 </button>
               </div>
 
-              <!-- 二级分类 -->
+              <!-- 二级分类（可拖拽） -->
               <div v-if="isExpanded(cat.id) && cat.children">
-                <div
-                  v-for="child in cat.children"
-                  :key="child.id"
-                  class="px-3 py-1.5 cursor-pointer hover:bg-bg-secondary rounded transition-colors flex items-center group text-sm"
-                  :class="{ 'bg-bg-secondary font-medium': selectedId === child.id }"
-                  @click="handleSelect(child.id)"
+                <draggable
+                  :list="cat.children"
+                  :disabled="isFrozen"
+                  ghost-class="ghost-sub"
+                  handle=".drag-handle-sub"
+                  @end="(e) => handleSubDragEnd(cat.id, index, e)"
                 >
-                  <!-- 左边留空对齐一级图标位置 -->
-                  <span class="w-10"></span>
-                  <!-- 二级分类图标：菱形 -->
-                  <span
-                    class="w-2.5 h-2.5 flex-shrink-0 rotate-45"
-                    :style="{ backgroundColor: child.color || cat.color }"
-                  ></span>
-                  <span class="flex-1 truncate ml-2">{{ child.name }}</span>
-                  <!-- 命令数量 -->
-                  <span v-if="commandCounts[child.id]" class="text-xs text-secondary ml-1">
-                    {{ commandCounts[child.id] }}
-                  </span>
-                  <button
-                    class="opacity-0 group-hover:opacity-100 hover:text-accent text-xs"
-                    @click.stop="handleEdit(child)"
-                    title="编辑"
-                  >
-                    ✎
-                  </button>
-                  <button
-                    class="opacity-0 group-hover:opacity-100 hover:text-error text-xs"
-                    @click.stop="handleDelete(child.id)"
-                    title="删除"
-                  >
-                    ×
-                  </button>
-                </div>
+                  <template #item="{ element: child, index: childIndex }">
+                    <div
+                      class="px-3 py-1.5 cursor-pointer hover:bg-bg-secondary rounded transition-colors flex items-center group text-sm"
+                      :class="{ 'bg-bg-secondary font-medium': selectedId === child.id }"
+                      @click="handleSelect(child.id)"
+                    >
+                      <!-- 左边留空对齐一级图标位置 -->
+                      <span class="w-10"></span>
+                      <!-- 二级分类序号 -->
+                      <span class="text-xs text-secondary font-mono">{{ formatSubIndex(childIndex) }}</span>
+                      <!-- 二级分类图标：菱形 -->
+                      <span
+                        class="w-2.5 h-2.5 flex-shrink-0 rotate-45 ml-1"
+                        :style="{ backgroundColor: child.color || cat.color }"
+                      ></span>
+                      <span class="flex-1 truncate ml-2">{{ child.name }}</span>
+                      <!-- 命令数量 -->
+                      <span v-if="commandCounts[child.id]" class="text-xs text-secondary ml-1">
+                        {{ commandCounts[child.id] }}
+                      </span>
+                      <!-- 拖拽手柄（仅未冻结时显示） -->
+                      <span
+                        v-if="!isFrozen"
+                        class="drag-handle-sub cursor-move text-secondary hover:text-primary opacity-0 group-hover:opacity-100"
+                        style="font-size: 8px;"
+                      >
+                        ⋮⋮
+                      </span>
+                      <button
+                        class="opacity-0 group-hover:opacity-100 hover:text-accent text-xs ml-1"
+                        @click.stop="handleEdit(child)"
+                        title="编辑"
+                      >
+                        ✎
+                      </button>
+                      <button
+                        class="opacity-0 group-hover:opacity-100 hover:text-error text-xs ml-1"
+                        @click.stop="handleDelete(child.id)"
+                        title="删除"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </template>
+                </draggable>
               </div>
             </div>
           </template>
@@ -314,5 +348,9 @@ const totalCommandCount = computed(() => {
 .ghost {
   opacity: 0.5;
   background: #c8ebfb;
+}
+.ghost-sub {
+  opacity: 0.5;
+  background: #d4edda;
 }
 </style>
