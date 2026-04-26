@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref } from 'vue'
-import { getCommandContentByArch, hasArchContent } from '../../utils/database.js'
+import { getCommandContentByArch, hasArchContent, getCommandDisplayContent } from '../../utils/database.js'
 
 const props = defineProps({
   command: Object,
@@ -18,8 +18,24 @@ const tagsList = computed(() => {
   return props.command.tags.split(',').map(t => t.trim()).filter(t => t)
 })
 
-// 根据架构模式获取显示内容
+// 是否为全部模式
+const isBothMode = computed(() => {
+  return props.archMode === 'both'
+})
+
+// 全部模式下的内容列表
+const contentList = computed(() => {
+  if (!isBothMode.value) {
+    return null
+  }
+  return getCommandContentByArch(props.command, 'both')
+})
+
+// 单一架构模式下的显示内容
 const displayContent = computed(() => {
+  if (isBothMode.value) {
+    return null
+  }
   return getCommandContentByArch(props.command, props.archMode)
 })
 
@@ -31,11 +47,16 @@ const archStatus = computed(() => {
 // 架构图标
 const archIcon = computed(() => {
   if (props.archMode === 'centralized') {
-    return archStatus.value.hasCentralized ? '🔵' : '⚪'
+    return '🔵'
   } else if (props.archMode === 'distributed') {
-    return archStatus.value.hasDistributed ? '🟢' : '⚪'
+    return '🟢'
   }
-  return '⚪'
+  // 全部模式：显示多个图标
+  const icons = []
+  if (archStatus.value.hasCentralized) icons.push('🔵')
+  if (archStatus.value.hasDistributed) icons.push('🟢')
+  if (archStatus.value.hasCommon && icons.length === 0) icons.push('⚪')
+  return icons.join(' ')
 })
 
 // 复制命令
@@ -44,9 +65,11 @@ function handleCopy(content) {
   showCopyMenu.value = false
 }
 
-// 复制当前架构内容
+// 复制当前架构内容（单一模式）
 function handleCopyCurrent() {
-  handleCopy(displayContent.value)
+  if (displayContent.value) {
+    handleCopy(displayContent.value)
+  }
 }
 
 // 编辑命令
@@ -121,13 +144,33 @@ function toggleCopyMenu() {
       </div>
     </div>
 
-    <!-- Command Content -->
+    <!-- 单一架构模式：显示单个内容 -->
     <div
+      v-if="!isBothMode && displayContent"
       class="bg-bg-secondary p-2 rounded font-mono text-sm break-all cursor-pointer hover:bg-border transition-colors"
       @click="handleCopyCurrent"
       title="点击复制"
     >
       {{ displayContent }}
+    </div>
+
+    <!-- 全部模式：显示所有架构内容 -->
+    <div v-if="isBothMode && contentList && contentList.length > 0" class="space-y-2">
+      <div
+        v-for="item in contentList"
+        :key="item.type"
+        class="bg-bg-secondary p-2 rounded font-mono text-sm break-all cursor-pointer hover:bg-border transition-colors"
+        @click="handleCopy(item.content)"
+        title="点击复制"
+      >
+        <div class="flex items-center gap-1 mb-1">
+          <span :class="item.type === 'centralized' ? 'text-blue-500' : item.type === 'distributed' ? 'text-green-500' : 'text-gray-400'">
+            {{ item.type === 'centralized' ? '🔵' : item.type === 'distributed' ? '🟢' : '⚪' }}
+          </span>
+          <span class="text-xs text-secondary">{{ item.label }}</span>
+        </div>
+        {{ item.content }}
+      </div>
     </div>
 
     <!-- Description -->
