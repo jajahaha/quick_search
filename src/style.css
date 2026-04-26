@@ -2,8 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
-/* 浅色皮肤 */
-:root, [data-theme="default"] {
+/* 浅色皮肤（默认） */
+:root {
   --color-primary: #37352F;
   --color-secondary: #787774;
   --color-accent: #0066CC;

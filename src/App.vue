@@ -12,19 +12,18 @@ import { copyToClipboard } from './utils/clipboard.js'
 
 // 皮肤主题配置
 const THEME_KEY = 'gaussdb_theme'
-const themes = [
-  { id: 'default', name: '浅色', icon: '👔' },
-  { id: 'dark', name: '深色', icon: '🧥' }
-]
 const currentTheme = ref(localStorage.getItem(THEME_KEY) || 'default')
-const showThemeMenu = ref(false)
 
 // 切换皮肤
-function switchTheme(themeId) {
-  currentTheme.value = themeId
-  localStorage.setItem(THEME_KEY, themeId)
-  document.documentElement.setAttribute('data-theme', themeId)
-  showThemeMenu.value = false
+function toggleTheme() {
+  const newTheme = currentTheme.value === 'default' ? 'dark' : 'default'
+  currentTheme.value = newTheme
+  localStorage.setItem(THEME_KEY, newTheme)
+  if (newTheme === 'dark') {
+    document.documentElement.setAttribute('data-theme', 'dark')
+  } else {
+    document.documentElement.removeAttribute('data-theme')
+  }
 }
 
 // 架构模式状态
@@ -82,7 +81,11 @@ async function loadData() {
 // 初始化
 onMounted(async () => {
   // 应用保存的皮肤主题
-  document.documentElement.setAttribute('data-theme', currentTheme.value)
+  if (currentTheme.value === 'dark') {
+    document.documentElement.setAttribute('data-theme', 'dark')
+  } else {
+    document.documentElement.removeAttribute('data-theme')
+  }
 
   try {
     await initDB()
@@ -218,7 +221,7 @@ function refreshData() {
 </script>
 
 <template>
-  <div class="min-h-screen flex flex-col" @click="showThemeMenu = false">
+  <div class="min-h-screen flex flex-col">
     <!-- Title Bar -->
     <div
       class="relative text-white px-6 py-5 overflow-hidden"
@@ -268,31 +271,13 @@ function refreshData() {
       />
       <div class="flex gap-2 flex-shrink-0 items-center">
         <!-- Theme Switcher -->
-        <div class="relative" @click.stop>
-          <button
-            class="btn btn-secondary flex items-center gap-1"
-            @click="showThemeMenu = !showThemeMenu"
-          >
-            <span>{{ themes.find(t => t.id === currentTheme)?.icon }}</span>
-            <span class="text-xs">{{ themes.find(t => t.id === currentTheme)?.name }}</span>
-          </button>
-          <!-- Theme Dropdown -->
-          <div
-            v-if="showThemeMenu"
-            class="absolute right-0 top-full mt-1 bg-background border border-border rounded shadow-lg z-20 min-w-[120px]"
-          >
-            <button
-              v-for="theme in themes"
-              :key="theme.id"
-              class="w-full px-3 py-2 text-left text-sm hover:bg-bg-secondary flex items-center gap-2"
-              :class="currentTheme === theme.id ? 'bg-bg-secondary' : ''"
-              @click="switchTheme(theme.id)"
-            >
-              <span>{{ theme.icon }}</span>
-              <span>{{ theme.name }}</span>
-            </button>
-          </div>
-        </div>
+        <button
+          class="btn btn-secondary flex items-center gap-1"
+          @click="toggleTheme"
+          title="切换皮肤"
+        >
+          <span>{{ currentTheme === 'default' ? '👔' : '🧥' }}</span>
+        </button>
         <button class="btn btn-secondary" @click="openImportModal">
           导入/导出
         </button>
