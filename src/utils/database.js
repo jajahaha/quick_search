@@ -321,12 +321,18 @@ export function getCommands(categoryId = null, archMode = 'both') {
     hasWhere = true;
   }
 
-  // 架构筛选：集中式只显示有集中式内容的命令，分布式只显示有分布式内容的命令
+  // 架构筛选：
+  // 集中式模式：显示有集中式内容 OR 有通用内容的命令
+  // 分布式模式：显示有分布式内容 OR 有通用内容的命令
   if (archMode === 'centralized') {
-    sql += hasWhere ? ' AND c.centralized_content IS NOT NULL AND c.centralized_content != "" ' : ' WHERE c.centralized_content IS NOT NULL AND c.centralized_content != "" ';
+    sql += hasWhere
+      ? ' AND (c.centralized_content IS NOT NULL AND c.centralized_content != "" OR c.content IS NOT NULL AND c.content != "") '
+      : ' WHERE (c.centralized_content IS NOT NULL AND c.centralized_content != "" OR c.content IS NOT NULL AND c.content != "") ';
     hasWhere = true;
   } else if (archMode === 'distributed') {
-    sql += hasWhere ? ' AND c.distributed_content IS NOT NULL AND c.distributed_content != "" ' : ' WHERE c.distributed_content IS NOT NULL AND c.distributed_content != "" ';
+    sql += hasWhere
+      ? ' AND (c.distributed_content IS NOT NULL AND c.distributed_content != "" OR c.content IS NOT NULL AND c.content != "") '
+      : ' WHERE (c.distributed_content IS NOT NULL AND c.distributed_content != "" OR c.content IS NOT NULL AND c.content != "") ';
     hasWhere = true;
   }
   // archMode === 'both' 时显示所有命令
@@ -356,11 +362,17 @@ export function getCommands(categoryId = null, archMode = 'both') {
 // 根据架构模式获取命令内容
 export function getCommandContentByArch(cmd, archMode) {
   if (archMode === 'centralized') {
-    // 集中式模式：显示集中式命令（已筛选，必定有内容）
-    return cmd.centralizedContent;
+    // 集中式模式：优先显示集中式命令，否则显示通用命令
+    if (cmd.centralizedContent && cmd.centralizedContent.trim()) {
+      return cmd.centralizedContent;
+    }
+    return cmd.content || '';
   } else if (archMode === 'distributed') {
-    // 分布式模式：显示分布式命令（已筛选，必定有内容）
-    return cmd.distributedContent;
+    // 分布式模式：优先显示分布式命令，否则显示通用命令
+    if (cmd.distributedContent && cmd.distributedContent.trim()) {
+      return cmd.distributedContent;
+    }
+    return cmd.content || '';
   }
   // 全部模式：返回所有可用内容（让组件决定如何显示）
   const contents = [];
@@ -370,7 +382,7 @@ export function getCommandContentByArch(cmd, archMode) {
   if (cmd.distributedContent && cmd.distributedContent.trim()) {
     contents.push({ type: 'distributed', content: cmd.distributedContent, label: '分布式' });
   }
-  if (cmd.content && cmd.content.trim() && contents.length === 0) {
+  if (cmd.content && cmd.content.trim()) {
     contents.push({ type: 'common', content: cmd.content, label: '通用' });
   }
   return contents;
@@ -379,18 +391,26 @@ export function getCommandContentByArch(cmd, archMode) {
 // 获取命令的单一显示内容（用于简化场景）
 export function getCommandDisplayContent(cmd, archMode) {
   if (archMode === 'centralized') {
-    return cmd.centralizedContent;
+    // 集中式：优先集中式，否则通用
+    if (cmd.centralizedContent && cmd.centralizedContent.trim()) {
+      return cmd.centralizedContent;
+    }
+    return cmd.content || '';
   } else if (archMode === 'distributed') {
-    return cmd.distributedContent;
+    // 分布式：优先分布式，否则通用
+    if (cmd.distributedContent && cmd.distributedContent.trim()) {
+      return cmd.distributedContent;
+    }
+    return cmd.content || '';
   }
-  // 全部模式：如果有多个内容，返回第一个；否则返回通用
+  // 全部模式：显示所有可用内容
   if (cmd.centralizedContent && cmd.centralizedContent.trim()) {
     return cmd.centralizedContent;
   }
   if (cmd.distributedContent && cmd.distributedContent.trim()) {
     return cmd.distributedContent;
   }
-  return cmd.content;
+  return cmd.content || '';
 }
 
 // 判断命令是否有架构专用内容
@@ -448,11 +468,11 @@ export function searchCommands(keyword, archMode = 'both') {
   `;
   const params = [`%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`];
 
-  // 架构筛选
+  // 架构筛选：集中式显示集中式或通用，分布式显示分布式或通用
   if (archMode === 'centralized') {
-    sql += ' AND c.centralized_content IS NOT NULL AND c.centralized_content != "" ';
+    sql += ' AND (c.centralized_content IS NOT NULL AND c.centralized_content != "" OR c.content IS NOT NULL AND c.content != "") ';
   } else if (archMode === 'distributed') {
-    sql += ' AND c.distributed_content IS NOT NULL AND c.distributed_content != "" ';
+    sql += ' AND (c.distributed_content IS NOT NULL AND c.distributed_content != "" OR c.content IS NOT NULL AND c.content != "") ';
   }
 
   sql += ' ORDER BY c.sort_order DESC';

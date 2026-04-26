@@ -44,18 +44,31 @@ const archStatus = computed(() => {
   return hasArchContent(props.command)
 })
 
+// 当前显示内容的类型（单一架构模式）
+const currentContentType = computed(() => {
+  if (isBothMode.value) return null
+  if (props.archMode === 'centralized') {
+    return archStatus.value.hasCentralized ? 'centralized' : 'common'
+  } else if (props.archMode === 'distributed') {
+    return archStatus.value.hasDistributed ? 'distributed' : 'common'
+  }
+  return 'common'
+})
+
 // 架构图标
 const archIcon = computed(() => {
   if (props.archMode === 'centralized') {
-    return '🔵'
+    // 集中式模式：有集中式显示🔵，否则显示⚪（通用）
+    return archStatus.value.hasCentralized ? '🔵' : '⚪'
   } else if (props.archMode === 'distributed') {
-    return '🟢'
+    // 分布式模式：有分布式显示🟢，否则显示⚪（通用）
+    return archStatus.value.hasDistributed ? '🟢' : '⚪'
   }
-  // 全部模式：显示多个图标
+  // 全部模式：显示所有存在的图标
   const icons = []
   if (archStatus.value.hasCentralized) icons.push('🔵')
   if (archStatus.value.hasDistributed) icons.push('🟢')
-  if (archStatus.value.hasCommon && icons.length === 0) icons.push('⚪')
+  if (archStatus.value.hasCommon) icons.push('⚪')
   return icons.join(' ')
 })
 
@@ -151,6 +164,12 @@ function toggleCopyMenu() {
       @click="handleCopyCurrent"
       title="点击复制"
     >
+      <div class="flex items-center gap-1 mb-1">
+        <span :class="currentContentType === 'centralized' ? 'text-blue-500' : currentContentType === 'distributed' ? 'text-green-500' : 'text-gray-400'">
+          {{ currentContentType === 'centralized' ? '🔵' : currentContentType === 'distributed' ? '🟢' : '⚪' }}
+        </span>
+        <span class="text-xs text-secondary">{{ currentContentType === 'centralized' ? '集中式' : currentContentType === 'distributed' ? '分布式' : '通用' }}</span>
+      </div>
       {{ displayContent }}
     </div>
 
