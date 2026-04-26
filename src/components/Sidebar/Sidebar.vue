@@ -62,6 +62,20 @@ function toggleExpand(categoryId) {
 function isExpanded(categoryId) {
   return expandedCategories.value.has(categoryId)
 }
+
+// 全部展开
+function expandAll() {
+  props.categories.forEach(cat => {
+    if (cat.children && cat.children.length > 0) {
+      expandedCategories.value.add(cat.id)
+    }
+  })
+}
+
+// 全部折叠
+function collapseAll() {
+  expandedCategories.value.clear()
+}
 </script>
 
 <template>
@@ -96,6 +110,16 @@ function isExpanded(categoryId) {
       >
         <span class="w-4 text-center">📋</span>
         <span class="flex-1">全部命令</span>
+      </div>
+
+      <!-- Expand/Collapse All -->
+      <div class="px-3 py-1 flex gap-2 text-xs text-secondary">
+        <button class="hover:text-accent" @click="expandAll" title="全部展开">
+          ▼ 全部展开
+        </button>
+        <button class="hover:text-accent" @click="collapseAll" title="全部折叠">
+          ▶ 全部折叠
+        </button>
       </div>
 
       <!-- Category Tree -->
