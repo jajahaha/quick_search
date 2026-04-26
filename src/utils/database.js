@@ -311,13 +311,25 @@ export function getCommands(categoryId = null, archMode = 'both') {
     LEFT JOIN categories parent ON cat.parent_id = parent.id
   `;
   const params = [];
+  let hasWhere = false;
 
+  // 分类筛选
   if (categoryId) {
-    // 获取该分类及其子分类的 ID
     const categoryIds = getCategoryWithChildrenIds(categoryId);
     sql += ` WHERE c.category_id IN (${categoryIds.map(() => '?').join(',')}) `;
     params.push(...categoryIds);
+    hasWhere = true;
   }
+
+  // 架构筛选：集中式只显示有集中式内容的命令，分布式只显示有分布式内容的命令
+  if (archMode === 'centralized') {
+    sql += hasWhere ? ' AND c.centralized_content IS NOT NULL AND c.centralized_content != "" ' : ' WHERE c.centralized_content IS NOT NULL AND c.centralized_content != "" ';
+    hasWhere = true;
+  } else if (archMode === 'distributed') {
+    sql += hasWhere ? ' AND c.distributed_content IS NOT NULL AND c.distributed_content != "" ' : ' WHERE c.distributed_content IS NOT NULL AND c.distributed_content != "" ';
+    hasWhere = true;
+  }
+  // archMode === 'both' 时显示所有命令
 
   sql += ' ORDER BY c.sort_order DESC, c.id DESC';
 
@@ -344,9 +356,18 @@ export function getCommands(categoryId = null, archMode = 'both') {
 // 根据架构模式获取命令内容
 export function getCommandContentByArch(cmd, archMode) {
   if (archMode === 'centralized') {
-    return cmd.centralizedContent || cmd.content;
+    // 集中式模式：显示集中式命令（已筛选，必定有内容）
+    return cmd.centralizedContent;
   } else if (archMode === 'distributed') {
-    return cmd.distributedContent || cmd.content;
+    // 分布式模式：显示分布式命令（已筛选，必定有内容）
+    return cmd.distributedContent;
+  }
+  // 全部模式：优先显示架构专用命令，否则显示通用命令
+  if (cmd.centralizedContent && cmd.centralizedContent.trim()) {
+    return cmd.centralizedContent;
+  }
+  if (cmd.distributedContent && cmd.distributedContent.trim()) {
+    return cmd.distributedContent;
   }
   return cmd.content;
 }
@@ -394,7 +415,7 @@ export function searchCommands(keyword, archMode = 'both') {
   if (!db) return [];
   if (!keyword.trim()) return getCommands(null, archMode);
 
-  const result = db.exec(`
+  let sql = `
     SELECT c.id, c.name, c.content, c.centralized_content, c.distributed_content,
            c.description, c.tags, c.sort_order, c.category_id,
            cat.name as category_name, cat.color as category_color, cat.parent_id as category_parent_id,
@@ -402,10 +423,20 @@ export function searchCommands(keyword, archMode = 'both') {
     FROM commands c
     LEFT JOIN categories cat ON c.category_id = cat.id
     LEFT JOIN categories parent ON cat.parent_id = parent.id
-    WHERE c.name LIKE ? OR c.content LIKE ? OR c.centralized_content LIKE ? OR c.distributed_content LIKE ? OR c.description LIKE ? OR c.tags LIKE ?
-    ORDER BY c.sort_order DESC
-  `, [`%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`]);
+    WHERE (c.name LIKE ? OR c.content LIKE ? OR c.centralized_content LIKE ? OR c.distributed_content LIKE ? OR c.description LIKE ? OR c.tags LIKE ?)
+  `;
+  const params = [`%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`];
 
+  // 架构筛选
+  if (archMode === 'centralized') {
+    sql += ' AND c.centralized_content IS NOT NULL AND c.centralized_content != "" ';
+  } else if (archMode === 'distributed') {
+    sql += ' AND c.distributed_content IS NOT NULL AND c.distributed_content != "" ';
+  }
+
+  sql += ' ORDER BY c.sort_order DESC';
+
+  const result = db.exec(sql, params);
   if (!result.length) return [];
   return result[0].values.map(row => ({
     id: row[0],
