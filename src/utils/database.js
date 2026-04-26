@@ -187,9 +187,15 @@ export function getCommands(categoryId = null) {
 }
 
 export function addCommand(name, content, categoryId, description, tags) {
+  // 获取当前最大 sort_order，新命令排在前面
+  const maxOrderResult = db.exec('SELECT MAX(sort_order) FROM commands');
+  const maxOrder = maxOrderResult.length && maxOrderResult[0].values[0][0]
+    ? maxOrderResult[0].values[0][0] + 1
+    : 100;
+
   db.run(
-    `INSERT INTO commands (name, content, category_id, description, tags) VALUES (?, ?, ?, ?, ?)`,
-    [name, content, categoryId || null, description || '', tags || '']
+    `INSERT INTO commands (name, content, category_id, description, tags, sort_order) VALUES (?, ?, ?, ?, ?, ?)`,
+    [name, content, categoryId || null, description || '', tags || '', maxOrder]
   );
   saveDB();
   return db.exec('SELECT last_insert_rowid()')[0].values[0][0];
