@@ -16,31 +16,47 @@ async function handleImportExcel(event) {
   try {
     const data = await parseExcelFile(file)
     const categories = getCategories()
-    const categoryMap = new Map(categories.map(c => [c.name, c.id]))
+    // 使用 trim 处理分类名，避免空格导致匹配失败
+    const categoryMap = new Map(categories.map(c => [c.name.trim(), c.id]))
 
+    let importedCount = 0
     data.forEach(row => {
+      const categoryName = row['分类'] ? row['分类'].trim() : ''
       let categoryId = null
-      if (row['分类']) {
-        if (categoryMap.has(row['分类'])) {
-          categoryId = categoryMap.get(row['分类'])
+
+      if (categoryName) {
+        if (categoryMap.has(categoryName)) {
+          categoryId = categoryMap.get(categoryName)
         } else {
-          const newId = addCategory(row['分类'])
-          categoryMap.set(row['分类'], newId)
+          // 创建新分类
+          const newId = addCategory(categoryName)
+          categoryMap.set(categoryName, newId)
           categoryId = newId
+          console.log('Created new category:', categoryName, 'ID:', newId)
         }
       }
-      addCommand(
-        row['名称'] || '',
-        row['命令'] || '',
-        categoryId,
-        row['描述'] || '',
-        row['标签'] || ''
-      )
+
+      const commandName = row['名称'] ? row['名称'].trim() : ''
+      const commandContent = row['命令'] ? row['命令'].trim() : ''
+
+      if (commandName && commandContent) {
+        addCommand(
+          commandName,
+          commandContent,
+          categoryId,
+          row['描述'] ? row['描述'].trim() : '',
+          row['标签'] ? row['标签'].trim() : ''
+        )
+        importedCount++
+        console.log('Added command:', commandName, 'Category ID:', categoryId)
+      }
     })
-    emit('toast', `成功导入 ${data.length} 条命令`)
+
+    emit('toast', `成功导入 ${importedCount} 条命令`)
     emit('refresh')
     emit('close')
   } catch (e) {
+    console.error('Import error:', e)
     emit('toast', '导入失败：' + e.message, 'error')
   }
 }
