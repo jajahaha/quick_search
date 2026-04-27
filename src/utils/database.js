@@ -125,8 +125,12 @@ function insertTestData() {
     { name: '实时会话', color: '#7C3AED', sortOrder: 2 }  // 紫色
   ];
 
+  // 插入一级分类并记录实际生成的 ID
+  const parentIds = {};
   categories.forEach((cat, idx) => {
     db.run('INSERT INTO categories (name, color, parent_id, sort_order) VALUES (?, ?, NULL, ?)', [cat.name, cat.color, idx]);
+    const newId = db.exec('SELECT last_insert_rowid()')[0].values[0][0];
+    parentIds[cat.name] = newId;
   });
 
   // 颜色渐变函数（按索引调整亮度，形成渐变）
@@ -140,52 +144,53 @@ function insertTestData() {
     return `#${lighten(r).toString(16).padStart(2, '0')}${lighten(g).toString(16).padStart(2, '0')}${lighten(b).toString(16).padStart(2, '0')}`;
   }
 
-  // 二级分类（按索引渐变颜色）
-  // Git(1) → 提交相关(4), 分支管理(5)
-  // 集群(2) → 查询(6), 变更(7)
-  // 实时会话(3) → 查询(8)
-  const subCategoriesByParent = {
-    1: [{ name: '提交相关' }, { name: '分支管理' }],
-    2: [{ name: '查询' }, { name: '变更' }],
-    3: [{ name: '查询' }]
+  // 二级分类配置（按父分类名称映射）
+  const subCategoriesConfig = {
+    'Git': [{ name: '提交相关' }, { name: '分支管理' }],
+    '集群': [{ name: '查询' }, { name: '变更' }],
+    '实时会话': [{ name: '查询' }]
   };
-  const parentColors = { 1: '#0F7B6C', 2: '#E03E3E', 3: '#7C3AED' };
 
-  Object.entries(subCategoriesByParent).forEach(([parentId, children]) => {
-    const parentColor = parentColors[parentId];
+  // 插入二级分类并记录实际生成的 ID
+  const subCategoryIds = {};
+  Object.entries(subCategoriesConfig).forEach(([parentName, children]) => {
+    const parentId = parentIds[parentName];
+    const parentColor = categories.find(c => c.name === parentName).color;
     children.forEach((cat, idx) => {
       const gradient = gradientColor(parentColor, idx, children.length);
-      db.run('INSERT INTO categories (name, color, parent_id) VALUES (?, ?, ?)', [cat.name, gradient, parseInt(parentId)]);
+      db.run('INSERT INTO categories (name, color, parent_id) VALUES (?, ?, ?)', [cat.name, gradient, parentId]);
+      const newId = db.exec('SELECT last_insert_rowid()')[0].values[0][0];
+      subCategoryIds[`${parentName}/${cat.name}`] = newId;
     });
   });
 
-  // 命令数据
-  // categoryId: Git提交相关=4, Git分支管理=5, 集群查询=6, 集群变更=7, 实时会话查询=8
+  // 命令数据（使用动态获取的分类 ID）
   const commands = [
     // Git 提交相关
-    { name: 'Git 查看日志', content: 'git log --oneline -10', categoryId: 4, description: '查看最近10条提交记录', tags: 'git,log,查看' },
-    { name: 'Git 查看状态', content: 'git status', categoryId: 4, description: '查看当前工作区状态', tags: 'git,status,查看' },
-    { name: 'Git 撤销修改', content: 'git checkout -- <file>', categoryId: 4, description: '撤销文件修改', tags: 'git,checkout,撤销' },
-    { name: 'Git 拉取', content: 'git pull origin main', categoryId: 4, description: '拉取远程代码到本地', tags: 'git,pull,远程' },
-    { name: 'Git 推送', content: 'git push origin main', categoryId: 4, description: '推送代码到远程仓库', tags: 'git,push,远程' },
-    { name: 'Git 提交', content: 'git commit -m "message"', categoryId: 4, description: '提交代码到本地仓库', tags: 'git,commit,基础' },
+    { name: 'Git 查看日志', content: 'git log --oneline -10', categoryKey: 'Git/提交相关', description: '查看最近10条提交记录', tags: 'git,log,查看' },
+    { name: 'Git 查看状态', content: 'git status', categoryKey: 'Git/提交相关', description: '查看当前工作区状态', tags: 'git,status,查看' },
+    { name: 'Git 撤销修改', content: 'git checkout -- <file>', categoryKey: 'Git/提交相关', description: '撤销文件修改', tags: 'git,checkout,撤销' },
+    { name: 'Git 拉取', content: 'git pull origin main', categoryKey: 'Git/提交相关', description: '拉取远程代码到本地', tags: 'git,pull,远程' },
+    { name: 'Git 推送', content: 'git push origin main', categoryKey: 'Git/提交相关', description: '推送代码到远程仓库', tags: 'git,push,远程' },
+    { name: 'Git 提交', content: 'git commit -m "message"', categoryKey: 'Git/提交相关', description: '提交代码到本地仓库', tags: 'git,commit,基础' },
     // Git 分支管理
-    { name: 'Git 合并分支', content: 'git merge <branch-name>', categoryId: 5, description: '合并指定分支到当前分支', tags: 'git,merge,分支' },
-    { name: 'Git 切换分支', content: 'git checkout <branch-name>', categoryId: 5, description: '切换到指定分支', tags: 'git,checkout,分支' },
-    { name: 'Git 创建分支', content: 'git branch <branch-name>', categoryId: 5, description: '创建新分支', tags: 'git,branch,分支' },
+    { name: 'Git 合并分支', content: 'git merge <branch-name>', categoryKey: 'Git/分支管理', description: '合并指定分支到当前分支', tags: 'git,merge,分支' },
+    { name: 'Git 切换分支', content: 'git checkout <branch-name>', categoryKey: 'Git/分支管理', description: '切换到指定分支', tags: 'git,checkout,分支' },
+    { name: 'Git 创建分支', content: 'git branch <branch-name>', categoryKey: 'Git/分支管理', description: '创建新分支', tags: 'git,branch,分支' },
     // 集群 查询
-    { name: '查询状态', content: 'cm_ctl query -cv', categoryId: 6, description: '', tags: '' },
+    { name: '查询状态', content: 'cm_ctl query -cv', categoryKey: '集群/查询', description: '', tags: '' },
     // 集群 变更
-    { name: '重平衡', content: 'cm_ctl query switchover -a', categoryId: 7, description: '', tags: '' },
+    { name: '重平衡', content: 'cm_ctl query switchover -a', categoryKey: '集群/变更', description: '', tags: '' },
     // 实时会话 查询（集中式/分布式）
-    { name: '会话详情', content: '', centralizedContent: 'Select * from pg_stat_activity;', distributedContent: 'Select * from pgxc_stat_activity;', categoryId: 8, description: '', tags: '' },
-    { name: '会话状态', content: '', centralizedContent: 'Select state, count(1) from pg_stat_activity group by 1 order by 2 desc;', distributedContent: 'Select state, count(1) from pgxc_stat_activity group by 1 order by 2 desc;', categoryId: 8, description: '', tags: '' }
+    { name: '会话详情', content: '', centralizedContent: 'Select * from pg_stat_activity;', distributedContent: 'Select * from pgxc_stat_activity;', categoryKey: '实时会话/查询', description: '', tags: '' },
+    { name: '会话状态', content: '', centralizedContent: 'Select state, count(1) from pg_stat_activity group by 1 order by 2 desc;', distributedContent: 'Select state, count(1) from pgxc_stat_activity group by 1 order by 2 desc;', categoryKey: '实时会话/查询', description: '', tags: '' }
   ];
 
   commands.forEach((cmd, idx) => {
+    const categoryId = subCategoryIds[cmd.categoryKey] || null;
     db.run(
       'INSERT INTO commands (name, content, centralized_content, distributed_content, category_id, description, tags, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [cmd.name, cmd.content || '', cmd.centralizedContent || '', cmd.distributedContent || '', cmd.categoryId, cmd.description || '', cmd.tags || '', idx * 10]
+      [cmd.name, cmd.content || '', cmd.centralizedContent || '', cmd.distributedContent || '', categoryId, cmd.description || '', cmd.tags || '', idx]
     );
   });
 }
@@ -429,8 +434,8 @@ export function getCommands(categoryId = null, archMode = 'both') {
   }
   // archMode === 'both' 时显示所有命令
 
-  // 按一级分类排序 -> 二级分类排序 -> 命令排序
-  sql += ' ORDER BY parent_sort_order ASC, cat_sort_order ASC, c.sort_order DESC, c.id DESC';
+  // 按一级分类排序 -> 二级分类排序 -> 命令排序（sort_order 值小的排前面）
+  sql += ' ORDER BY parent_sort_order ASC, cat_sort_order ASC, c.sort_order ASC, c.id ASC';
 
   const result = db.exec(sql, params);
   if (!result.length) return [];
@@ -518,10 +523,11 @@ export function hasArchContent(cmd) {
 }
 
 export function addCommand(name, content, categoryId, description, tags, centralizedContent = '', distributedContent = '') {
+  // 新命令排在最后，获取当前最大 sort_order + 1
   const maxOrderResult = db.exec('SELECT MAX(sort_order) FROM commands');
-  const maxOrder = maxOrderResult.length && maxOrderResult[0].values[0][0]
+  const maxOrder = maxOrderResult.length && maxOrderResult[0].values[0][0] != null
     ? maxOrderResult[0].values[0][0] + 1
-    : 100;
+    : 0;
 
   const finalCategoryId = (categoryId === null || categoryId === undefined || categoryId === 0) ? null : categoryId;
 
@@ -572,8 +578,8 @@ export function searchCommands(keyword, archMode = 'both') {
     sql += ' AND (c.distributed_content IS NOT NULL AND c.distributed_content != "" OR c.content IS NOT NULL AND c.content != "") ';
   }
 
-  // 按一级分类排序 -> 二级分类排序 -> 命令排序
-  sql += ' ORDER BY parent_sort_order ASC, cat_sort_order ASC, c.sort_order DESC, c.id DESC';
+  // 按一级分类排序 -> 二级分类排序 -> 命令排序（sort_order 值小的排前面）
+  sql += ' ORDER BY parent_sort_order ASC, cat_sort_order ASC, c.sort_order ASC, c.id ASC';
 
   const result = db.exec(sql, params);
   if (!result.length) return [];
@@ -598,9 +604,9 @@ export function searchCommands(keyword, archMode = 'both') {
 }
 
 export function updateCommandOrder(idList) {
-  const maxOrder = idList.length;
+  // 排序值：第一个命令 sort_order = 0（排在最前面），依次递增
   idList.forEach((id, index) => {
-    db.run('UPDATE commands SET sort_order = ? WHERE id = ?', [maxOrder - index, id]);
+    db.run('UPDATE commands SET sort_order = ? WHERE id = ?', [index, id]);
   });
   saveDB();
 }
