@@ -93,6 +93,29 @@ const categoryIndexMap = computed(() => {
   return map
 })
 
+// 按二级分类分组命令（用于换行显示）
+const groupedCommands = computed(() => {
+  const groups = []
+  let currentGroup = null
+
+  filteredCommands.value.forEach(cmd => {
+    const categoryId = cmd.categoryId
+    // 如果是新分类，创建新分组
+    if (!currentGroup || currentGroup.categoryId !== categoryId) {
+      currentGroup = {
+        categoryId: categoryId,
+        categoryName: cmd.categoryName,
+        categoryColor: cmd.categoryColor,
+        commands: []
+      }
+      groups.push(currentGroup)
+    }
+    currentGroup.commands.push(cmd)
+  })
+
+  return groups
+})
+
 // 加载数据
 async function loadData() {
   try {
@@ -343,17 +366,34 @@ function refreshData() {
           <button class="btn btn-primary" @click="openAddCommand">添加第一条命令</button>
         </div>
 
-        <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2">
-          <CommandCard
-            v-for="cmd in filteredCommands"
-            :key="cmd.id"
-            :command="cmd"
-            :archMode="archMode"
-            :categoryIndexMap="categoryIndexMap"
-            @edit="openEditCommand"
-            @delete="handleDeleteCommand"
-            @copy="handleCopyCommand"
-          />
+        <div v-else class="space-y-4">
+          <!-- 按分类分组显示 -->
+          <div v-for="group in groupedCommands" :key="group.categoryId">
+            <!-- 分类标题（仅当有分类时显示） -->
+            <div v-if="group.categoryName" class="flex items-center gap-2 mb-2 px-1">
+              <span
+                class="px-2 py-1 text-sm rounded-full text-white shadow-sm"
+                :style="{ backgroundColor: group.categoryColor }"
+              >
+                {{ categoryIndexMap[group.categoryId] || '' }} {{ group.categoryName }}
+              </span>
+              <span class="text-xs text-secondary">{{ group.commands.length }} 条</span>
+            </div>
+            <!-- 命令卡片网格 -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2">
+              <CommandCard
+                v-for="cmd in group.commands"
+                :key="cmd.id"
+                :command="cmd"
+                :archMode="archMode"
+                :categoryIndexMap="categoryIndexMap"
+                :showCategoryLabel="false"
+                @edit="openEditCommand"
+                @delete="handleDeleteCommand"
+                @copy="handleCopyCommand"
+              />
+            </div>
+          </div>
         </div>
       </main>
     </div>

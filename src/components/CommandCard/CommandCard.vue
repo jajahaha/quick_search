@@ -5,7 +5,8 @@ import { getCommandContentByArch, hasArchContent, getCommandDisplayContent } fro
 const props = defineProps({
   command: Object,
   archMode: String,
-  categoryIndexMap: Object
+  categoryIndexMap: Object,
+  showCategoryLabel: { type: Boolean, default: true }
 })
 
 const emit = defineEmits(['edit', 'delete', 'copy'])
@@ -110,7 +111,7 @@ function toggleCopyMenu() {
     <div class="flex items-center gap-1.5 mb-1.5">
       <span class="text-sm">{{ archIcon }}</span>
       <span
-        v-if="command.categoryName"
+        v-if="showCategoryLabel && command.categoryName"
         class="px-1.5 py-0.5 text-xs rounded-full text-white shadow-sm"
         :style="{ backgroundColor: command.categoryColor }"
       >
