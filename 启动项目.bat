@@ -20,11 +20,9 @@ if not exist "node_modules" (
     echo.
 )
 
-if not exist "public\sql-wasm-browser.js" (
-    echo Copying sql.js files...
-    copy "node_modules\sql.js\dist\sql-wasm-browser.js" "public\" >nul
-    copy "node_modules\sql.js\dist\sql-wasm-browser.wasm" "public\" >nul
-)
+echo Copying sql.js files...
+copy "node_modules\sql.js\dist\sql-wasm-browser.js" "public\" >nul 2>&1
+copy "node_modules\sql.js\dist\sql-wasm-browser.wasm" "public\" >nul 2>&1
 
 echo Starting development server...
 echo Please visit: http://localhost:3000

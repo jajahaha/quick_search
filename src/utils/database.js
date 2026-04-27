@@ -639,20 +639,22 @@ export function importDatabaseFile(file) {
 
 // 恢复默认数据（删除所有数据并重新生成测试数据）
 export function restoreDefaultData() {
-  // 删除数据库中的所有数据
-  db.run('DELETE FROM commands');
-  db.run('DELETE FROM categories');
-  // 重置自增 ID
-  db.run('DELETE FROM sqlite_sequence WHERE name="commands"');
-  db.run('DELETE FROM sqlite_sequence WHERE name="categories"');
-  // 重新生成测试数据
+  // 先清除 localStorage 缓存，确保从干净状态开始
+  localStorage.removeItem(DB_KEY);
+
+  // 创建全新的数据库
+  db = new SQL.Database();
+  createTables();
   insertTestData();
   saveDB();
 }
 
 // 清空所有数据（删除所有数据，不重新生成测试数据）
 export function clearAllData() {
-  db.run('DELETE FROM commands');
-  db.run('DELETE FROM categories');
+  // 清除 localStorage 缓存
+  localStorage.removeItem(DB_KEY);
+  // 创建空数据库
+  db = new SQL.Database();
+  createTables();
   saveDB();
 }
