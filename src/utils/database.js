@@ -553,6 +553,40 @@ export function deleteCommand(id) {
   saveDB();
 }
 
+// 批量替换所有命令（用于批量编辑保存）
+export function batchReplaceCommands(commands, categoryMap) {
+  // categoryMap: { '一级分类名/二级分类名': categoryId } 或 { '一级分类名': categoryId }
+
+  // 1. 删除所有命令
+  db.run('DELETE FROM commands');
+  db.run('DELETE FROM sqlite_sequence WHERE name="commands"');
+
+  // 2. 逐条插入新数据
+  commands.forEach((cmd, idx) => {
+    // 解析分类
+    let categoryId = null;
+    const parentCatName = cmd.parentCategoryName ? cmd.parentCategoryName.trim() : '';
+    const catName = cmd.categoryName ? cmd.categoryName.trim() : '';
+
+    if (catName && parentCatName) {
+      // 有二级分类
+      const key = `${parentCatName}/${catName}`;
+      categoryId = categoryMap[key] || null;
+    } else if (parentCatName) {
+      // 只有一级分类
+      categoryId = categoryMap[parentCatName] || null;
+    }
+
+    db.run(
+      'INSERT INTO commands (name, content, centralized_content, distributed_content, category_id, description, tags, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [cmd.name || '', cmd.content || '', cmd.centralizedContent || '', cmd.distributedContent || '', categoryId, cmd.description || '', cmd.tags || '', idx]
+    );
+  });
+
+  // 3. 保存
+  saveDB();
+}
+
 export function searchCommands(keyword, archMode = 'both') {
   if (!db) return [];
   if (!keyword.trim()) return getCommands(null, archMode);

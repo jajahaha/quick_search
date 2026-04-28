@@ -6,6 +6,7 @@ import CommandCard from './components/CommandCard/CommandCard.vue'
 import CommandModal from './components/Modal/CommandModal.vue'
 import CategoryModal from './components/Modal/CategoryModal.vue'
 import ImportModal from './components/Modal/ImportModal.vue'
+import BatchEditModal from './components/Modal/BatchEditModal.vue'
 import Toast from './components/common/Toast.vue'
 import { initDB, getCommands, getCategoryTree, getAllCategories, searchCommands, addCommand, updateCommand, deleteCommand, updateCommandOrder, getCommandContentByArch, getCategoryWithChildrenIds } from './utils/database.js'
 import { copyToClipboard } from './utils/clipboard.js'
@@ -49,6 +50,7 @@ const lastRefreshTime = ref(Date.now()) // 刷新时间戳，用于触发子组�
 const showCommandModal = ref(false)
 const showCategoryModal = ref(false)
 const showImportModal = ref(false)
+const showBatchEditModal = ref(false)
 const editingCommand = ref(null)
 const editingCategory = ref(null)
 
@@ -263,6 +265,11 @@ function openImportModal() {
   showImportModal.value = true
 }
 
+// 打开批量编辑弹窗
+function openBatchEditModal() {
+  showBatchEditModal.value = true
+}
+
 // 数据更新后刷新
 function refreshData() {
   loadData()
@@ -327,6 +334,9 @@ function refreshData() {
         </button>
         <button class="btn btn-secondary px-2 py-1 text-sm" @click="openImportModal">
           📦
+        </button>
+        <button class="btn btn-secondary px-2 py-1 text-sm" @click="openBatchEditModal">
+          📝
         </button>
         <button class="btn btn-primary px-3 py-1 text-sm" @click="openAddCommand">
           + 新增
@@ -418,6 +428,13 @@ function refreshData() {
     <ImportModal
       v-if="showImportModal"
       @close="showImportModal = false"
+      @refresh="refreshData"
+      @toast="showToast"
+    />
+
+    <BatchEditModal
+      v-if="showBatchEditModal"
+      @close="showBatchEditModal = false"
       @refresh="refreshData"
       @toast="showToast"
     />
