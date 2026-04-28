@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, nextTick } from 'vue'
 import { getCommands, getAllCategories, addCategory, batchReplaceCommands } from '../../utils/database.js'
 
 const emit = defineEmits(['close', 'refresh', 'toast'])
@@ -13,18 +13,6 @@ const allCategories = ref([])
 // 一级分类列表
 const parentCategories = computed(() => {
   return allCategories.value.filter(c => c.parentId === null)
-})
-
-// 二级分类按父分类分组
-const childCategoriesByParent = computed(() => {
-  const map = {}
-  allCategories.value.forEach(c => {
-    if (c.parentId !== null) {
-      if (!map[c.parentId]) map[c.parentId] = []
-      map[c.parentId].push(c)
-    }
-  })
-  return map
 })
 
 // 分类名称映射（用于查找ID）
@@ -66,6 +54,21 @@ function gradientColor(hex, index) {
   return `#${lighten(r).toString(16).padStart(2, '0')}${lighten(g).toString(16).padStart(2, '0')}${lighten(b).toString(16).padStart(2, '0')}`
 }
 
+// 创建空行
+function createEmptyRow() {
+  return {
+    id: null,
+    parentCategoryName: '',
+    categoryName: '',
+    name: '',
+    content: '',
+    centralizedContent: '',
+    distributedContent: '',
+    description: '',
+    tags: ''
+  }
+}
+
 // 加载数据
 function loadData() {
   const commands = getCommands()
@@ -80,48 +83,60 @@ function loadData() {
     description: cmd.description || '',
     tags: cmd.tags || ''
   }))
+  // 添加一个空行在末尾
+  localData.value.push(createEmptyRow())
   allCategories.value = getAllCategories()
 }
 
-// 获取选中一级分类的ID
-function getParentIdByName(name) {
-  const cat = allCategories.value.find(c => c.parentId === null && c.name === name)
-  return cat ? cat.id : null
+// 当一级分类改变时
+function onParentCategoryChange(row) {
+  // 可以保持二级分类，或者清空
 }
 
-// 当一级分类改变时，清空二级分类（如果新的一级分类下没有匹配的二级分类）
-function onParentCategoryChange(row) {
-  const parentId = getParentIdByName(row.parentCategoryName)
-  if (parentId) {
-    const children = childCategoriesByParent.value[parentId] || []
-    if (!children.find(c => c.name === row.categoryName)) {
-      row.categoryName = ''
-    }
+// 检查最后一行是否有内容，如果有则添加新空行
+function checkAndAddRow() {
+  const lastRow = localData.value[localData.value.length - 1]
+  if (lastRow && (lastRow.name.trim() || lastRow.content.trim() || lastRow.centralizedContent.trim() || lastRow.distributedContent.trim())) {
+    localData.value.push(createEmptyRow())
   }
 }
 
-// 添加新行
-function addRow() {
-  localData.value.push({
-    id: null,
-    parentCategoryName: '',
-    categoryName: '',
-    name: '',
-    content: '',
-    centralizedContent: '',
-    distributedContent: '',
-    description: '',
-    tags: ''
-  })
+// 监听输入变化，自动添加新行
+function onInputChange(row) {
+  checkAndAddRow()
+}
+
+// 批量添加多行
+function addMultipleRows(count) {
+  for (let i = 0; i < count; i++) {
+    localData.value.push(createEmptyRow())
+  }
 }
 
 // 删除行
 function deleteRow(index) {
+  // 不允许删除最后一个空行
+  if (index === localData.value.length - 1) return
   localData.value.splice(index, 1)
+}
+
+// 清空空行（保存前）
+function filterEmptyRows() {
+  localData.value = localData.value.filter(row =>
+    row.name.trim() || row.content.trim() || row.centralizedContent.trim() || row.distributedContent.trim()
+  )
 }
 
 // 保存数据
 async function handleSave() {
+  // 过滤空行
+  filterEmptyRows()
+
+  if (localData.value.length === 0) {
+    emit('toast', '没有数据需要保存', 'warning')
+    return
+  }
+
   // 验证数据
   let hasError = false
   localData.value.forEach((row, idx) => {
@@ -150,23 +165,19 @@ async function handleSave() {
     if (catName && parentCatName) {
       const key = `${parentCatName}/${catName}`
       if (!newCategoryMap[key]) {
-        // 需要创建二级分类，先确保一级分类存在
         let parentId = newCategoryMap[parentCatName]
         if (!parentId && parentCatName) {
-          // 创建一级分类
           const parentColor = getRandomColor(usedColors)
           parentId = addCategory(parentCatName, parentColor)
           newCategoryMap[parentCatName] = parentId
           usedColors.push(parentColor)
         }
-        // 创建二级分类
         const parentColor = allCategories.value.find(c => c.id === parentId)?.color || '#0066CC'
         const childColor = gradientColor(parentColor, Object.keys(newCategoryMap).filter(k => k.startsWith(parentCatName + '/')).length)
         const childId = addCategory(catName, childColor, parentId)
         newCategoryMap[key] = childId
       }
     } else if (parentCatName && !newCategoryMap[parentCatName]) {
-      // 只有一级分类，需要创建
       const parentColor = getRandomColor(usedColors)
       const parentId = addCategory(parentCatName, parentColor)
       newCategoryMap[parentCatName] = parentId
@@ -187,6 +198,14 @@ function handleClose() {
   emit('close')
 }
 
+// 快捷键：Enter 在最后一行的名称列时添加新行
+function onKeyDown(event, row, index) {
+  if (event.key === 'Enter' && index === localData.value.length - 2) {
+    // 在倒数第二行（最后一个有内容的行）按 Enter，跳到新空行
+    checkAndAddRow()
+  }
+}
+
 onMounted(() => {
   loadData()
 })
@@ -199,16 +218,17 @@ onMounted(() => {
       <div class="px-5 py-4 border-b border-border flex items-center justify-between shrink-0">
         <h2 class="text-lg font-semibold">📝 批量编辑</h2>
         <div class="flex items-center gap-2">
-          <span class="text-sm text-secondary">{{ localData.length }} 条命令</span>
+          <span class="text-sm text-secondary">{{ localData.length - 1 }} 条命令（末尾空行自动添加）</span>
           <button class="text-secondary hover:text-primary text-xl" @click="handleClose">×</button>
         </div>
       </div>
 
       <!-- Toolbar -->
       <div class="px-5 py-2 border-b border-border flex items-center gap-2 shrink-0">
-        <button class="btn btn-primary text-sm" @click="addRow">
-          + 添加行
-        </button>
+        <button class="btn btn-secondary text-sm" @click="addMultipleRows(1)">+ 1行</button>
+        <button class="btn btn-secondary text-sm" @click="addMultipleRows(5)">+ 5行</button>
+        <button class="btn btn-secondary text-sm" @click="addMultipleRows(10)">+ 10行</button>
+        <span class="text-xs text-secondary ml-2">填写最后一行后自动添加新行</span>
       </div>
 
       <!-- Table -->
@@ -217,30 +237,37 @@ onMounted(() => {
           <!-- Fixed Header -->
           <thead class="sticky top-0 bg-bg-secondary z-10">
             <tr>
-              <th class="px-2 py-2 text-left text-xs font-medium text-secondary border-b border-border w-12">#</th>
-              <th class="px-2 py-2 text-left text-xs font-medium text-secondary border-b border-border w-20">一级分类</th>
-              <th class="px-2 py-2 text-left text-xs font-medium text-secondary border-b border-border w-20">二级分类</th>
-              <th class="px-2 py-2 text-left text-xs font-medium text-secondary border-b border-border w-24">名称 *</th>
-              <th class="px-2 py-2 text-left text-xs font-medium text-secondary border-b border-border w-40">通用命令</th>
-              <th class="px-2 py-2 text-left text-xs font-medium text-secondary border-b border-border w-40">集中式</th>
-              <th class="px-2 py-2 text-left text-xs font-medium text-secondary border-b border-border w-40">分布式</th>
-              <th class="px-2 py-2 text-left text-xs font-medium text-secondary border-b border-border w-28">描述</th>
-              <th class="px-2 py-2 text-left text-xs font-medium text-secondary border-b border-border w-20">标签</th>
-              <th class="px-2 py-2 text-center text-xs font-medium text-secondary border-b border-border w-10">操作</th>
+              <th class="px-2 py-2 text-left text-xs font-medium text-secondary border-b border-border w-10">#</th>
+              <th class="px-2 py-2 text-left text-xs font-medium text-secondary border-b border-border w-16">一级</th>
+              <th class="px-2 py-2 text-left text-xs font-medium text-secondary border-b border-border w-16">二级</th>
+              <th class="px-2 py-2 text-left text-xs font-medium text-secondary border-b border-border w-20">名称 *</th>
+              <th class="px-2 py-2 text-left text-xs font-medium text-secondary border-b border-border min-w-[200px]">通用命令</th>
+              <th class="px-2 py-2 text-left text-xs font-medium text-secondary border-b border-border min-w-[200px]">集中式</th>
+              <th class="px-2 py-2 text-left text-xs font-medium text-secondary border-b border-border min-w-[200px]">分布式</th>
+              <th class="px-2 py-2 text-left text-xs font-medium text-secondary border-b border-border w-24">描述</th>
+              <th class="px-2 py-2 text-left text-xs font-medium text-secondary border-b border-border w-16">标签</th>
+              <th class="px-2 py-2 text-center text-xs font-medium text-secondary border-b border-border w-8">删</th>
             </tr>
           </thead>
           <!-- Body -->
           <tbody>
-            <tr v-for="(row, index) in localData" :key="index" class="hover:bg-bg-secondary/50 group">
-              <td class="px-2 py-1 text-xs text-secondary border-b border-border">{{ index + 1 }}</td>
+            <tr v-for="(row, index) in localData" :key="index"
+              :class="[
+                'hover:bg-bg-secondary/50 group',
+                index === localData.length - 1 ? 'bg-bg-secondary/30' : ''
+              ]">
+              <td class="px-2 py-1 text-xs text-secondary border-b border-border">
+                {{ index === localData.length - 1 ? '+' : index + 1 }}
+              </td>
               <td class="px-2 py-1 border-b border-border">
                 <input
                   v-model="row.parentCategoryName"
                   type="text"
                   class="input text-sm w-full px-1 py-0.5"
-                  placeholder="一级分类"
+                  placeholder="一级"
                   list="parentCategories"
-                  @change="onParentCategoryChange(row)"
+                  @change="onParentCategoryChange(row); onInputChange(row)"
+                  @keydown="onKeyDown($event, row, index)"
                 />
                 <datalist id="parentCategories">
                   <option v-for="cat in parentCategories" :key="cat.id" :value="cat.name" />
@@ -251,8 +278,10 @@ onMounted(() => {
                   v-model="row.categoryName"
                   type="text"
                   class="input text-sm w-full px-1 py-0.5"
-                  placeholder="二级分类"
+                  placeholder="二级"
                   list="childCategories"
+                  @change="onInputChange(row)"
+                  @keydown="onKeyDown($event, row, index)"
                 />
                 <datalist id="childCategories">
                   <option v-for="cat in allCategories.filter(c => c.parentId !== null)" :key="cat.id" :value="cat.name" />
@@ -264,14 +293,17 @@ onMounted(() => {
                   type="text"
                   class="input text-sm w-full px-1 py-0.5"
                   placeholder="名称"
+                  @change="onInputChange(row)"
+                  @keydown="onKeyDown($event, row, index)"
                 />
               </td>
               <td class="px-2 py-1 border-b border-border">
                 <textarea
                   v-model="row.content"
                   class="input text-sm w-full px-1 py-0.5 resize-none"
-                  placeholder="通用命令"
+                  placeholder="通用"
                   rows="1"
+                  @change="onInputChange(row)"
                 ></textarea>
               </td>
               <td class="px-2 py-1 border-b border-border">
@@ -280,6 +312,7 @@ onMounted(() => {
                   class="input text-sm w-full px-1 py-0.5 resize-none"
                   placeholder="集中式"
                   rows="1"
+                  @change="onInputChange(row)"
                 ></textarea>
               </td>
               <td class="px-2 py-1 border-b border-border">
@@ -288,6 +321,7 @@ onMounted(() => {
                   class="input text-sm w-full px-1 py-0.5 resize-none"
                   placeholder="分布式"
                   rows="1"
+                  @change="onInputChange(row)"
                 ></textarea>
               </td>
               <td class="px-2 py-1 border-b border-border">
@@ -296,6 +330,7 @@ onMounted(() => {
                   type="text"
                   class="input text-sm w-full px-1 py-0.5"
                   placeholder="描述"
+                  @change="onInputChange(row)"
                 />
               </td>
               <td class="px-2 py-1 border-b border-border">
@@ -304,10 +339,12 @@ onMounted(() => {
                   type="text"
                   class="input text-sm w-full px-1 py-0.5"
                   placeholder="标签"
+                  @change="onInputChange(row)"
                 />
               </td>
               <td class="px-2 py-1 text-center border-b border-border">
                 <button
+                  v-if="index !== localData.length - 1"
                   class="text-error hover:text-error/80 text-sm opacity-0 group-hover:opacity-100"
                   @click="deleteRow(index)"
                   title="删除"
