@@ -1,7 +1,7 @@
 import * as XLSX from 'xlsx';
 
 // 标准字段列表（固定列）
-const STANDARD_FIELDS = [
+export const STANDARD_FIELDS = [
   '一级分类', '二级分类', '名称', '通用命令', '集中式命令', '分布式命令', '描述', '标签'
 ];
 
