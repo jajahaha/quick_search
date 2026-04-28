@@ -1,8 +1,12 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, onUnmounted } from 'vue'
 import { getCommands, getAllCategories, addCategory, batchReplaceCommands } from '../../utils/database.js'
 
 const emit = defineEmits(['close', 'refresh', 'toast'])
+
+// 标准字段列表
+const STANDARD_FIELDS = ['一级分类', '二级分类', '名称', '通用命令', '集中式', '分布式', '描述', '标签']
+const STANDARD_FIELD_KEYS = ['parentCategoryName', 'categoryName', 'name', 'content', 'centralizedContent', 'distributedContent', 'description', 'tags']
 
 // 本地编辑数据
 const localData = ref([])
@@ -15,6 +19,9 @@ const extraColumns = ref([])
 
 // 新列名称输入
 const newColumnName = ref('')
+
+// 粘贴模式提示
+const showPasteHint = ref(true)
 
 // 一级分类列表
 const parentCategories = computed(() => {
@@ -74,7 +81,6 @@ function createEmptyRow() {
     tags: '',
     extraFields: {}
   }
-  // 为所有扩展列初始化空值
   extraColumns.value.forEach(col => {
     row.extraFields[col] = ''
   })
@@ -106,7 +112,6 @@ function loadData() {
     tags: cmd.tags || '',
     extraFields: cmd.extraFields || {}
   }))
-  // 添加一个空行在末尾
   localData.value.push(createEmptyRow())
   allCategories.value = getAllCategories()
 }
@@ -120,7 +125,6 @@ function addColumn() {
     return
   }
   extraColumns.value.push(name)
-  // 为所有现有行添加该列的空值
   localData.value.forEach(row => {
     if (!row.extraFields) row.extraFields = {}
     row.extraFields[name] = ''
@@ -133,19 +137,107 @@ function deleteColumn(colName) {
   const index = extraColumns.value.indexOf(colName)
   if (index > -1) {
     extraColumns.value.splice(index, 1)
-    // 从所有行中删除该字段
     localData.value.forEach(row => {
-      if (row.extraFields) {
-        delete row.extraFields[colName]
-      }
+      if (row.extraFields) delete row.extraFields[colName]
     })
   }
+}
+
+// 处理粘贴事件（从Excel粘贴）
+function handlePaste(event) {
+  const clipboardData = event.clipboardData || window.clipboardData
+  const pastedText = clipboardData.getData('Text')
+
+  if (!pastedText) return
+
+  // 解析粘贴的文本（Excel粘贴是制表符分隔，换行分隔行）
+  const lines = pastedText.split(/\r?\n/).filter(line => line.trim())
+
+  if (lines.length === 0) return
+
+  // 解析每行的列数据
+  const rows = lines.map(line => line.split('\t'))
+
+  // 检测是否有标题行（第一行包含标准字段名）
+  const firstRow = rows[0]
+  const isHeaderRow = firstRow.some(cell => STANDARD_FIELDS.includes(cell.trim()) || cell.trim() === '集中式命令' || cell.trim() === '分布式命令')
+
+  let columnMapping = []
+  let dataRows = rows
+
+  if (isHeaderRow) {
+    // 第一行是标题，构建列映射
+    columnMapping = firstRow.map(cell => {
+      const cellName = cell.trim()
+      // 标准字段映射
+      if (cellName === '一级分类') return 'parentCategoryName'
+      if (cellName === '二级分类') return 'categoryName'
+      if (cellName === '名称') return 'name'
+      if (cellName === '通用命令' || cellName === '命令') return 'content'
+      if (cellName === '集中式命令' || cellName === '集中式') return 'centralizedContent'
+      if (cellName === '分布式命令' || cellName === '分布式') return 'distributedContent'
+      if (cellName === '描述') return 'description'
+      if (cellName === '标签') return 'tags'
+      // 扩展字段
+      return 'extra:' + cellName
+    })
+    dataRows = rows.slice(1)
+
+    // 添加新的扩展列
+    columnMapping.forEach(mapping => {
+      if (mapping.startsWith('extra:')) {
+        const colName = mapping.substring(6)
+        if (!extraColumns.value.includes(colName)) {
+          extraColumns.value.push(colName)
+        }
+      }
+    })
+  } else {
+    // 无标题行，按默认顺序映射
+    columnMapping = STANDARD_FIELD_KEYS.slice(0, firstRow.length)
+    // 多余的列作为扩展字段
+    for (let i = STANDARD_FIELD_KEYS.length; i < firstRow.length; i++) {
+      const colName = '扩展' + (i - STANDARD_FIELD_KEYS.length + 1)
+      if (!extraColumns.value.includes(colName)) {
+        extraColumns.value.push(colName)
+      }
+      columnMapping.push('extra:' + colName)
+    }
+  }
+
+  // 移除最后的空行
+  if (localData.value.length > 0 && localData.value[localData.value.length - 1].name === '' && !localData.value[localData.value.length - 1].content) {
+    localData.value.pop()
+  }
+
+  // 插入数据行
+  dataRows.forEach(rowData => {
+    const newRow = createEmptyRow()
+    rowData.forEach((cell, colIndex) => {
+      const mapping = columnMapping[colIndex]
+      if (!mapping) return
+      if (mapping.startsWith('extra:')) {
+        const colName = mapping.substring(6)
+        newRow.extraFields[colName] = cell.trim()
+      } else {
+        newRow[mapping] = cell.trim()
+      }
+    })
+    localData.value.push(newRow)
+  })
+
+  // 添加空行在末尾
+  localData.value.push(createEmptyRow())
+
+  showPasteHint.value = false
+  event.preventDefault()
+  emit('toast', `已粘贴 ${dataRows.length} 行数据`)
 }
 
 // 当一级分类改变时
 function onParentCategoryChange(row) {}
 
-// 检查最后一行是否有内容，如果有则添加新空行
+// 检查最后一行是否有内容
 function checkAndAddRow() {
   const lastRow = localData.value[localData.value.length - 1]
   const hasContent = lastRow && (
@@ -245,7 +337,6 @@ async function handleSave() {
     }
   }
 
-  // 批量保存命令（包含扩展字段）
   batchReplaceCommands(localData.value, newCategoryMap)
 
   emit('toast', `成功保存 ${localData.value.length} 条命令`)
@@ -258,8 +349,14 @@ function handleClose() {
   emit('close')
 }
 
+// 注册粘贴事件监听
 onMounted(() => {
   loadData()
+  document.addEventListener('paste', handlePaste)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('paste', handlePaste)
 })
 </script>
 
@@ -277,6 +374,13 @@ onMounted(() => {
 
       <!-- Toolbar -->
       <div class="px-4 py-2 border-b border-border flex items-center gap-2 shrink-0 flex-wrap">
+        <!-- 粘贴提示 -->
+        <div v-if="showPasteHint" class="bg-accent/10 text-accent text-xs px-3 py-1 rounded flex items-center gap-1">
+          <span>📋</span>
+          <span>直接从Excel复制数据粘贴到此处</span>
+          <button class="text-accent hover:text-accent/80 ml-1" @click="showPasteHint = false">×</button>
+        </div>
+        <span class="text-xs text-secondary">|</span>
         <button class="btn btn-secondary text-xs px-2" @click="addMultipleRows(1)">+1行</button>
         <button class="btn btn-secondary text-xs px-2" @click="addMultipleRows(5)">+5行</button>
         <button class="btn btn-secondary text-xs px-2" @click="addMultipleRows(10)">+10行</button>
@@ -289,7 +393,6 @@ onMounted(() => {
           placeholder="新列名"
         />
         <button class="btn btn-primary text-xs px-2" @click="addColumn">+ 添加列</button>
-        <span class="text-xs text-secondary ml-2">自动识别Excel列名</span>
       </div>
 
       <!-- Table Container -->
