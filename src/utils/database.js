@@ -69,6 +69,7 @@ function createTables() {
       description TEXT,
       tags TEXT,
       sort_order INTEGER DEFAULT 0,
+      extra_fields TEXT,
       FOREIGN KEY (category_id) REFERENCES categories(id)
     )
   `);
@@ -97,6 +98,7 @@ function migrateDatabase() {
     if (cmdColumns.length) {
       const hasCentralized = cmdColumns[0].values.some(col => col[1] === 'centralized_content');
       const hasDistributed = cmdColumns[0].values.some(col => col[1] === 'distributed_content');
+      const hasExtraFields = cmdColumns[0].values.some(col => col[1] === 'extra_fields');
       if (!hasCentralized) {
         db.run('ALTER TABLE commands ADD COLUMN centralized_content TEXT');
         console.log('Database migrated: added centralized_content column');
@@ -104,6 +106,10 @@ function migrateDatabase() {
       if (!hasDistributed) {
         db.run('ALTER TABLE commands ADD COLUMN distributed_content TEXT');
         console.log('Database migrated: added distributed_content column');
+      }
+      if (!hasExtraFields) {
+        db.run('ALTER TABLE commands ADD COLUMN extra_fields TEXT');
+        console.log('Database migrated: added extra_fields column');
       }
     }
   } catch (e) {
@@ -398,7 +404,7 @@ export function getCommands(categoryId = null, archMode = 'both') {
 
   let sql = `
     SELECT c.id, c.name, c.content, c.centralized_content, c.distributed_content,
-           c.description, c.tags, c.sort_order, c.category_id,
+           c.description, c.tags, c.sort_order, c.category_id, c.extra_fields,
            cat.name as category_name, cat.color as category_color, cat.parent_id as category_parent_id,
            cat.sort_order as cat_sort_order,
            parent.name as parent_category_name, parent.color as parent_category_color,
@@ -449,13 +455,14 @@ export function getCommands(categoryId = null, archMode = 'both') {
     tags: row[6] || '',
     sortOrder: row[7],
     categoryId: row[8],
-    categoryName: row[9] || '',
-    categoryColor: row[10] || '#0066CC',
-    categoryParentId: row[11],
-    catSortOrder: row[12] || 0,
-    parentCategoryName: row[13] || '',
-    parentCategoryColor: row[14] || '#0066CC',
-    parentSortOrder: row[15] || 0
+    extraFields: row[9] ? JSON.parse(row[9]) : {},
+    categoryName: row[10] || '',
+    categoryColor: row[11] || '#0066CC',
+    categoryParentId: row[12],
+    catSortOrder: row[13] || 0,
+    parentCategoryName: row[14] || '',
+    parentCategoryColor: row[15] || '#0066CC',
+    parentSortOrder: row[16] || 0
   }));
 }
 
@@ -522,7 +529,7 @@ export function hasArchContent(cmd) {
   };
 }
 
-export function addCommand(name, content, categoryId, description, tags, centralizedContent = '', distributedContent = '') {
+export function addCommand(name, content, categoryId, description, tags, centralizedContent = '', distributedContent = '', extraFields = {}) {
   // 新命令排在最后，获取当前最大 sort_order + 1
   const maxOrderResult = db.exec('SELECT MAX(sort_order) FROM commands');
   const maxOrder = maxOrderResult.length && maxOrderResult[0].values[0][0] != null
@@ -530,20 +537,22 @@ export function addCommand(name, content, categoryId, description, tags, central
     : 0;
 
   const finalCategoryId = (categoryId === null || categoryId === undefined || categoryId === 0) ? null : categoryId;
+  const extraFieldsJson = JSON.stringify(extraFields);
 
   db.run(
-    `INSERT INTO commands (name, content, centralized_content, distributed_content, category_id, description, tags, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [name, content, centralizedContent, distributedContent, finalCategoryId, description || '', tags || '', maxOrder]
+    `INSERT INTO commands (name, content, centralized_content, distributed_content, category_id, description, tags, sort_order, extra_fields) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [name, content, centralizedContent, distributedContent, finalCategoryId, description || '', tags || '', maxOrder, extraFieldsJson]
   );
   const newId = db.exec('SELECT last_insert_rowid()')[0].values[0][0];
   saveDB();
   return newId;
 }
 
-export function updateCommand(id, name, content, categoryId, description, tags, centralizedContent = '', distributedContent = '') {
+export function updateCommand(id, name, content, categoryId, description, tags, centralizedContent = '', distributedContent = '', extraFields = {}) {
+  const extraFieldsJson = JSON.stringify(extraFields);
   db.run(
-    `UPDATE commands SET name = ?, content = ?, centralized_content = ?, distributed_content = ?, category_id = ?, description = ?, tags = ? WHERE id = ?`,
-    [name, content, centralizedContent, distributedContent, categoryId || null, description || '', tags || '', id]
+    `UPDATE commands SET name = ?, content = ?, centralized_content = ?, distributed_content = ?, category_id = ?, description = ?, tags = ?, extra_fields = ? WHERE id = ?`,
+    [name, content, centralizedContent, distributedContent, categoryId || null, description || '', tags || '', extraFieldsJson, id]
   );
   saveDB();
 }
@@ -577,9 +586,12 @@ export function batchReplaceCommands(commands, categoryMap) {
       categoryId = categoryMap[parentCatName] || null;
     }
 
+    // 处理扩展字段
+    const extraFieldsJson = cmd.extraFields ? JSON.stringify(cmd.extraFields) : '{}';
+
     db.run(
-      'INSERT INTO commands (name, content, centralized_content, distributed_content, category_id, description, tags, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [cmd.name || '', cmd.content || '', cmd.centralizedContent || '', cmd.distributedContent || '', categoryId, cmd.description || '', cmd.tags || '', idx]
+      'INSERT INTO commands (name, content, centralized_content, distributed_content, category_id, description, tags, sort_order, extra_fields) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [cmd.name || '', cmd.content || '', cmd.centralizedContent || '', cmd.distributedContent || '', categoryId, cmd.description || '', cmd.tags || '', idx, extraFieldsJson]
     );
   });
 
@@ -593,7 +605,7 @@ export function searchCommands(keyword, archMode = 'both') {
 
   let sql = `
     SELECT c.id, c.name, c.content, c.centralized_content, c.distributed_content,
-           c.description, c.tags, c.sort_order, c.category_id,
+           c.description, c.tags, c.sort_order, c.category_id, c.extra_fields,
            cat.name as category_name, cat.color as category_color, cat.parent_id as category_parent_id,
            cat.sort_order as cat_sort_order,
            parent.name as parent_category_name, parent.color as parent_category_color,
@@ -627,13 +639,14 @@ export function searchCommands(keyword, archMode = 'both') {
     tags: row[6] || '',
     sortOrder: row[7],
     categoryId: row[8],
-    categoryName: row[9] || '',
-    categoryColor: row[10] || '#0066CC',
-    categoryParentId: row[11],
-    catSortOrder: row[12] || 0,
-    parentCategoryName: row[13] || '',
-    parentCategoryColor: row[14] || '#0066CC',
-    parentSortOrder: row[15] || 0
+    extraFields: row[9] ? JSON.parse(row[9]) : {},
+    categoryName: row[10] || '',
+    categoryColor: row[11] || '#0066CC',
+    categoryParentId: row[12],
+    catSortOrder: row[13] || 0,
+    parentCategoryName: row[14] || '',
+    parentCategoryColor: row[15] || '#0066CC',
+    parentSortOrder: row[16] || 0
   }));
 }
 

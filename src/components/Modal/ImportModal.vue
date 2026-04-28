@@ -1,7 +1,7 @@
 <script setup>
 import { ref } from 'vue'
 import { getCommands, getCategories, getAllCategories, addCommand, addCategory, findCategoryByName, exportDatabaseFile, importDatabaseFile, restoreDefaultData, clearAllData } from '../../utils/database.js'
-import { exportToExcel, parseExcelFile } from '../../utils/excel.js'
+import { exportToExcel, parseExcelFile, parseRowData, STANDARD_FIELDS } from '../../utils/excel.js'
 
 const emit = defineEmits(['close', 'refresh', 'toast'])
 
@@ -79,20 +79,16 @@ async function handleImportExcel(event) {
 
     let importedCount = 0
     data.forEach(row => {
-      const parentCategoryName = row['一级分类'] ? row['一级分类'].trim() : ''
-      const childCategoryName = row['二级分类'] ? row['二级分类'].trim() : ''
-      const commandName = row['名称'] ? row['名称'].trim() : ''
-      // 支持新旧格式：通用命令 或 命令
-      const commonContent = row['通用命令'] ? row['通用命令'].trim() : (row['命令'] ? row['命令'].trim() : '')
-      const centralizedContent = row['集中式命令'] ? row['集中式命令'].trim() : ''
-      const distributedContent = row['分布式命令'] ? row['分布式命令'].trim() : ''
+      // 使用 parseRowData 解析行数据（支持扩展字段）
+      const parsed = parseRowData(row)
+      const { parentCategoryName, categoryName, name, content, centralizedContent, distributedContent, description, tags, extraFields } = parsed
 
       // 处理分类
       let categoryId = null
 
-      if (childCategoryName) {
+      if (categoryName) {
         // 有二级分类
-        const key = `${parentCategoryName}/${childCategoryName}`
+        const key = `${parentCategoryName}/${categoryName}`
         const lowerKey = key.toLowerCase()
 
         if (categoryMap.has(key)) {
@@ -124,7 +120,7 @@ async function handleImportExcel(event) {
           const parentColor = parentColorMap.get(parentId) || '#0066CC'
           const childIndex = parentChildIndexMap.get(parentId) || 0
           const childColor = gradientColor(parentColor, childIndex)
-          categoryId = addCategory(childCategoryName, childColor, parentId)
+          categoryId = addCategory(categoryName, childColor, parentId)
           parentChildIndexMap.set(parentId, childIndex + 1) // 更新计数
           categoryMap.set(key, categoryId)
           categoryMap.set(lowerKey, categoryId)
@@ -147,16 +143,17 @@ async function handleImportExcel(event) {
         }
       }
 
-      // 创建命令
-      if (commandName && (commonContent || centralizedContent || distributedContent)) {
+      // 创建命令（支持扩展字段）
+      if (name && (content || centralizedContent || distributedContent)) {
         addCommand(
-          commandName,
-          commonContent,
+          name,
+          content,
           categoryId,
-          row['描述'] ? row['描述'].trim() : '',
-          row['标签'] ? row['标签'].trim() : '',
+          description,
+          tags,
           centralizedContent,
-          distributedContent
+          distributedContent,
+          extraFields
         )
         importedCount++
       }

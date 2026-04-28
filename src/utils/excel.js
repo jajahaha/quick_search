@@ -1,24 +1,52 @@
 import * as XLSX from 'xlsx';
 
-// 导出命令到 Excel（支持二级分类和架构）
+// 标准字段列表（固定列）
+const STANDARD_FIELDS = [
+  '一级分类', '二级分类', '名称', '通用命令', '集中式命令', '分布式命令', '描述', '标签'
+];
+
+// 导出命令到 Excel（支持扩展字段）
 export function exportToExcel(commands, filename = 'commands.xlsx') {
-  const data = commands.map(cmd => ({
-    '一级分类': cmd.parentCategoryName || '',
-    '二级分类': cmd.categoryName || '',
-    '名称': cmd.name,
-    '通用命令': cmd.content || '',
-    '集中式命令': cmd.centralizedContent || '',
-    '分布式命令': cmd.distributedContent || '',
-    '描述': cmd.description || '',
-    '标签': cmd.tags || ''
-  }));
+  // 收集所有扩展字段名
+  const allExtraFields = new Set();
+  commands.forEach(cmd => {
+    if (cmd.extraFields) {
+      Object.keys(cmd.extraFields).forEach(key => allExtraFields.add(key));
+    }
+  });
+  const extraFieldList = Array.from(allExtraFields).sort();
+
+  // 构建导出数据
+  const data = commands.map(cmd => {
+    const row = {
+      '一级分类': cmd.parentCategoryName || '',
+      '二级分类': cmd.categoryName || '',
+      '名称': cmd.name,
+      '通用命令': cmd.content || '',
+      '集中式命令': cmd.centralizedContent || '',
+      '分布式命令': cmd.distributedContent || '',
+      '描述': cmd.description || '',
+      '标签': cmd.tags || ''
+    };
+    // 添加扩展字段
+    if (cmd.extraFields) {
+      extraFieldList.forEach(field => {
+        row[field] = cmd.extraFields[field] || '';
+      });
+    } else {
+      extraFieldList.forEach(field => {
+        row[field] = '';
+      });
+    }
+    return row;
+  });
 
   const worksheet = XLSX.utils.json_to_sheet(data);
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, '命令列表');
 
-  // 设置列宽
-  worksheet['!cols'] = [
+  // 设置列宽：标准列 + 扩展列
+  const cols = [
     { wch: 15 },  // 一级分类
     { wch: 15 },  // 二级分类
     { wch: 20 },  // 名称
@@ -28,11 +56,14 @@ export function exportToExcel(commands, filename = 'commands.xlsx') {
     { wch: 30 },  // 描述
     { wch: 20 },  // 标签
   ];
+  // 扩展列默认宽度
+  extraFieldList.forEach(() => cols.push({ wch: 20 }));
+  worksheet['!cols'] = cols;
 
   XLSX.writeFile(workbook, filename);
 }
 
-// 从 Excel 导入命令
+// 从 Excel 导入命令（支持动态扩展列）
 export function parseExcelFile(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -50,6 +81,33 @@ export function parseExcelFile(file) {
     reader.onerror = reject;
     reader.readAsArrayBuffer(file);
   });
+}
+
+// 解析 Excel 行数据，分离标准字段和扩展字段
+export function parseRowData(row) {
+  const standardData = {
+    parentCategoryName: row['一级分类'] ? row['一级分类'].trim() : '',
+    categoryName: row['二级分类'] ? row['二级分类'].trim() : '',
+    name: row['名称'] ? row['名称'].trim() : '',
+    content: row['通用命令'] ? row['通用命令'].trim() : (row['命令'] ? row['命令'].trim() : ''),
+    centralizedContent: row['集中式命令'] ? row['集中式命令'].trim() : '',
+    distributedContent: row['分布式命令'] ? row['分布式命令'].trim() : '',
+    description: row['描述'] ? row['描述'].trim() : '',
+    tags: row['标签'] ? row['标签'].trim() : ''
+  };
+
+  // 提取扩展字段（非标准列）
+  const extraFields = {};
+  Object.keys(row).forEach(key => {
+    if (!STANDARD_FIELDS.includes(key) && key !== '命令') {
+      const value = row[key];
+      if (value !== undefined && value !== null && value !== '') {
+        extraFields[key] = String(value).trim();
+      }
+    }
+  });
+
+  return { ...standardData, extraFields };
 }
 
 // 导出分类到 Excel
